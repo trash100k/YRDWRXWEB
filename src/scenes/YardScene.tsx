@@ -1,11 +1,12 @@
 import { useRef, useMemo, Suspense, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Float, Html, PerformanceMonitor } from '@react-three/drei'
+import { Float, Html } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { useBeatStore } from '@/stores/beatStore'
 import { YARD_LABELS } from '@/data/beats'
 import { QualityConfig } from '@/hooks/useGPUTier'
+import GrassMesh from './GrassMesh'
 
 // ─── colors ──────────────────────────────────────────────────────────
 const C = {
@@ -647,15 +648,43 @@ function InvoicePanel() {
   )
 }
 
+// ─── CREW PINS (beat 5, Html overlay) ───────────────────────────────
+function CrewPins() {
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  if (beatIndex < 5) return null
+
+  return (
+    <>
+      {[
+        { pos: [-2, 1.2, 3] as [number,number,number], name: 'Marcus', status: 'En route' },
+        { pos: [2, 1.2, 4] as [number,number,number], name: 'Dani', status: 'En route' },
+      ].map(crew => (
+        <Html key={crew.name} position={crew.pos} distanceFactor={12} zIndexRange={[5, 15]} style={{ pointerEvents: 'none' }}>
+          <div style={{
+            background: 'rgba(5,168,69,0.12)',
+            border: '1px solid rgba(5,168,69,0.3)',
+            borderRadius: '10px',
+            padding: '5px 10px',
+            animation: 'fadeUp 0.4s ease both',
+            whiteSpace: 'nowrap',
+          }}>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: '9px', fontWeight: 700, color: '#2ad16a', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {crew.name} · {crew.status}
+            </span>
+          </div>
+        </Html>
+      ))}
+    </>
+  )
+}
+
 // ─── INNER SCENE ─────────────────────────────────────────────────────
 function SceneContent({ quality }: { quality: QualityConfig }) {
-  const beatIndex   = useBeatStore(s => s.beatIndex)
+  const beatIndex    = useBeatStore(s => s.beatIndex)
   const scanProgress = useBeatStore(s => s.scanProgress)
+  const beatT        = useBeatStore(s => s.beatT)
 
-  const scanZRef = useRef(-12)
-  const beatIndexRef = useRef(beatIndex)
-  const beatTRef     = useRef(0)
-  useEffect(() => { beatIndexRef.current = beatIndex }, [beatIndex])
+  const scanZ = beatIndex === 1 ? lerp(-10, 10, 1 - Math.pow(1 - beatT, 2.5)) : beatIndex >= 2 ? 12 : -12
 
   return (
     <>
@@ -666,11 +695,13 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
       <Structures />
       <Hedges />
       <Trees />
+      <GrassMesh count={quality.grassCount} scanZ={scanZ} scanProgress={scanProgress} />
       <ScanPlane />
       <CuttyReticle />
       <YardLabels />
       <JobCard />
       <InvoicePanel />
+      <CrewPins />
 
       {quality.enablePostProcessing && (
         <EffectComposer>
