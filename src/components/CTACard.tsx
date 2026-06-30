@@ -46,7 +46,7 @@ export function CTACard() {
                 marginBottom: '16px',
               }}
             >
-              READY TO HELP
+              THAT WAS ONE TUESDAY
             </div>
 
             {/* Divider */}

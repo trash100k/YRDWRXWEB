@@ -1,4 +1,9 @@
+import React, { useState } from "react";
+
 export function Pricing() {
+  const [billing, setBilling] = useState<"monthly" | "annual">("annual");
+  const annual = billing === "annual";
+
   const sectionStyle: React.CSSProperties = {
     background: "#09090b",
     width: "100%",
@@ -13,7 +18,7 @@ export function Pricing() {
 
   const headingBlockStyle: React.CSSProperties = {
     textAlign: "center",
-    paddingBottom: "56px",
+    paddingBottom: "40px",
   };
 
   const labelChipStyle: React.CSSProperties = {
@@ -40,8 +45,62 @@ export function Pricing() {
     fontFamily: "'Inter', sans-serif",
     fontWeight: 400,
     fontSize: "14px",
-    color: "#71717a",
+    color: "#9a9aa2",
     margin: 0,
+  };
+
+  const toggleWrapStyle: React.CSSProperties = {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "12px",
+    paddingBottom: "48px",
+  };
+
+  const pillTrackStyle: React.CSSProperties = {
+    display: "inline-flex",
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: "999px",
+    padding: "4px",
+    gap: "4px",
+  };
+
+  const pillBtnBaseStyle: React.CSSProperties = {
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "11px",
+    fontWeight: 400,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    border: "none",
+    borderRadius: "999px",
+    padding: "8px 18px",
+    cursor: "pointer",
+    transition: "background 0.2s ease, color 0.2s ease",
+  };
+
+  const pillActiveStyle: React.CSSProperties = {
+    ...pillBtnBaseStyle,
+    background: "#05A845",
+    color: "#000000",
+  };
+
+  const pillInactiveStyle: React.CSSProperties = {
+    ...pillBtnBaseStyle,
+    background: "transparent",
+    color: "#9a9aa2",
+  };
+
+  const saveChipStyle: React.CSSProperties = {
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "10px",
+    fontWeight: 400,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: "#2ad16a",
+    background: "rgba(5,168,69,0.15)",
+    borderRadius: "6px",
+    padding: "4px 9px",
   };
 
   const gridStyle: React.CSSProperties = {
@@ -76,12 +135,12 @@ export function Pricing() {
     textTransform: "uppercase",
     borderRadius: "6px",
     padding: "4px 10px",
-    marginBottom: "20px",
+    marginBottom: "12px",
   };
 
   const starterChipStyle: React.CSSProperties = {
     ...tierChipBaseStyle,
-    color: "#71717a",
+    color: "#9a9aa2",
     background: "rgba(255,255,255,0.04)",
     border: "1px solid rgba(255,255,255,0.08)",
   };
@@ -95,9 +154,18 @@ export function Pricing() {
 
   const enterpriseChipStyle: React.CSSProperties = {
     ...tierChipBaseStyle,
-    color: "#71717a",
+    color: "#9a9aa2",
     background: "rgba(255,255,255,0.04)",
     border: "1px solid rgba(255,255,255,0.08)",
+  };
+
+  const tierBlurbStyle: React.CSSProperties = {
+    fontFamily: "'Inter', sans-serif",
+    fontWeight: 400,
+    fontSize: "13.5px",
+    color: "#9a9aa2",
+    margin: "0 0 20px 0",
+    lineHeight: 1.4,
   };
 
   const mostPopularChipStyle: React.CSSProperties = {
@@ -133,7 +201,7 @@ export function Pricing() {
     fontFamily: "'Outfit', sans-serif",
     fontWeight: 400,
     fontSize: "16px",
-    color: "#71717a",
+    color: "#9a9aa2",
   };
 
   const customPriceStyle: React.CSSProperties = {
@@ -149,7 +217,7 @@ export function Pricing() {
     fontFamily: "'Inter', sans-serif",
     fontWeight: 400,
     fontSize: "13px",
-    color: "#52525b",
+    color: "#9a9aa2",
     marginBottom: "0",
   };
 
@@ -198,6 +266,7 @@ export function Pricing() {
     marginTop: "28px",
     boxSizing: "border-box",
     textAlign: "center",
+    textDecoration: "none",
   };
 
   const filledBtnStyle: React.CSSProperties = {
@@ -215,6 +284,21 @@ export function Pricing() {
     marginTop: "28px",
     boxSizing: "border-box",
     textAlign: "center",
+    textDecoration: "none",
+  };
+
+  const guaranteeStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    textAlign: "center",
+    fontFamily: "'Inter', sans-serif",
+    fontWeight: 400,
+    fontSize: "12px",
+    color: "#9a9aa2",
+    marginTop: "12px",
+    marginBottom: 0,
   };
 
   const finePrintStyle: React.CSSProperties = {
@@ -222,7 +306,7 @@ export function Pricing() {
     fontFamily: "'Inter', sans-serif",
     fontWeight: 400,
     fontSize: "13px",
-    color: "#52525b",
+    color: "#9a9aa2",
     marginTop: "32px",
   };
 
@@ -238,11 +322,11 @@ export function Pricing() {
     "Everything in Starter",
     "Unlimited crew members",
     "Unlimited jobs",
-    "Cutty AI yard scan",
-    "Auto-invoicing + SMS payment",
+    "Unlimited Cutty AI yard scans",
+    "Auto-invoicing + SMS pay links (Stripe)",
     "Route optimizer",
     "Client portal",
-    "Priority support",
+    "Priority support (4-hr response)",
   ];
 
   const enterpriseFeatures = [
@@ -251,7 +335,7 @@ export function Pricing() {
     "Custom domain + branding",
     "REST API access",
     "SSO / SAML login",
-    "Dedicated success manager",
+    "Dedicated success manager + onboarding",
   ];
 
   return (
@@ -261,13 +345,37 @@ export function Pricing() {
           <div style={labelChipStyle}>Pricing</div>
           <h2 style={headingStyle}>One plan for every crew size.</h2>
           <p style={subHeadingStyle}>
-            Cancel anytime. No setup call. Your first 30 days are free.
+            Start free forever, or try Pro free for 30 days. Cancel anytime — no
+            setup call.
           </p>
+        </div>
+
+        <div style={toggleWrapStyle}>
+          <div style={pillTrackStyle}>
+            <button
+              type="button"
+              style={annual ? pillInactiveStyle : pillActiveStyle}
+              onClick={() => setBilling("monthly")}
+              aria-pressed={!annual}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              style={annual ? pillActiveStyle : pillInactiveStyle}
+              onClick={() => setBilling("annual")}
+              aria-pressed={annual}
+            >
+              Annual
+            </button>
+          </div>
+          <span style={saveChipStyle}>Save 18%</span>
         </div>
 
         <div style={gridStyle}>
           <div style={baseCardStyle}>
             <div style={starterChipStyle}>Starter</div>
+            <p style={tierBlurbStyle}>For the solo operator getting off paper.</p>
             <div style={priceRowStyle}>
               <span style={priceStyle}>$0</span>
               <span style={priceSuffixStyle}>/month</span>
@@ -282,17 +390,24 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
-            <button style={outlinedBtnStyle}>Get started free</button>
+            <a href="#start" style={outlinedBtnStyle}>
+              Get started free
+            </a>
           </div>
 
           <div style={proCardStyle}>
             <div style={mostPopularChipStyle}>Most Popular</div>
             <div style={proChipStyle}>Pro</div>
+            <p style={tierBlurbStyle}>
+              For growing crews that want AI running the busywork.
+            </p>
             <div style={priceRowStyle}>
-              <span style={priceStyle}>$79</span>
+              <span style={priceStyle}>{annual ? "$65" : "$79"}</span>
               <span style={priceSuffixStyle}>/month</span>
             </div>
-            <p style={subPriceStyle}>Per crew. Billed monthly.</p>
+            <p style={subPriceStyle}>
+              {annual ? "Billed $780/yr · save 2 months" : "Per crew. Billed monthly."}
+            </p>
             <div style={dividerStyle} />
             <ul style={featuresListStyle}>
               {proFeatures.map((f) => (
@@ -302,13 +417,22 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
-            <button style={filledBtnStyle}>Start free for 30 days →</button>
+            <a href="#start" style={filledBtnStyle}>
+              Start free for 30 days →
+            </a>
+            <p style={guaranteeStyle}>
+              <span aria-hidden="true">🛡</span>
+              30-day money-back guarantee · No contracts
+            </p>
           </div>
 
           <div style={baseCardStyle}>
             <div style={enterpriseChipStyle}>Enterprise</div>
+            <p style={tierBlurbStyle}>For multi-location operations and franchises.</p>
             <div style={customPriceStyle}>Custom</div>
-            <p style={subPriceStyle}>Talk to a real human.</p>
+            <p style={subPriceStyle}>
+              Volume pricing for 5+ crews. Talk to a real human.
+            </p>
             <div style={dividerStyle} />
             <ul style={featuresListStyle}>
               {enterpriseFeatures.map((f) => (
@@ -318,12 +442,16 @@ export function Pricing() {
                 </li>
               ))}
             </ul>
-            <button style={outlinedBtnStyle}>Contact us</button>
+            <a href="#contact" style={outlinedBtnStyle}>
+              Book a demo
+            </a>
           </div>
         </div>
 
         <p style={finePrintStyle}>
           All plans include iOS + Android apps, offline mode, and 99.9% uptime SLA.
+          <br />
+          Cancel anytime — keep your data. Secured by Stripe.
         </p>
       </div>
     </section>

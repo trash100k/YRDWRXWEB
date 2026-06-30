@@ -26,6 +26,30 @@ export function HeroText() {
             boxSizing: 'border-box',
           }}
         >
+          {/* Kicker — animates in before the headline */}
+          <motion.span
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 320,
+              damping: 28,
+              delay: 0,
+            }}
+            style={{
+              display: 'block',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '11px',
+              fontWeight: 400,
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: '#2ad16a',
+              marginBottom: '18px',
+            }}
+          >
+            AI Yard OS for Landscapers
+          </motion.span>
+
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 16 }}

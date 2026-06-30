@@ -2,18 +2,76 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>YardWorx — AI That Runs Your Landscaping Business</title>
     <meta name="description" content="YardWorx sees every yard. Schedules every job. Collects every dollar. Built for landscapers who run on a truck and a phone." />
+    <link rel="canonical" href="https://yardworx.io/" />
+
+    <!-- Crawlers & app identity -->
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="YardWorx" />
+    <meta name="application-name" content="YardWorx" />
+    <meta name="apple-mobile-web-app-title" content="YardWorx" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="theme-color" content="#0a0f0a" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Favicons & app icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content="YardWorx" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="YardWorx — AI That Runs Your Landscaping Business" />
     <meta property="og:description" content="Watch AI scan a yard, build the quote, route the crew, and collect payment — in under 8 seconds." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://yardworx.io/" />
     <meta property="og:image" content="https://yardworx.io/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="YardWorx — AI scans a yard, builds the quote, routes the crew, collects payment" />
+
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@yardworx" />
+    <meta name="twitter:title" content="YardWorx — AI That Runs Your Landscaping Business" />
+    <meta name="twitter:description" content="Watch AI scan a yard, build the quote, route the crew, and collect payment — in under 8 seconds." />
     <meta name="twitter:image" content="https://yardworx.io/og-image.png" />
+    <meta name="twitter:image:alt" content="YardWorx — AI scans a yard, builds the quote, routes the crew, collects payment" />
+
+    <!-- Structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://yardworx.io/#organization",
+            "name": "YardWorx",
+            "url": "https://yardworx.io/",
+            "logo": "https://yardworx.io/favicon.svg",
+            "description": "AI-powered operations platform for landscapers — YardWorx sees every yard, schedules every job, and collects every dollar."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://yardworx.io/#software",
+            "name": "YardWorx",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web, iOS, Android",
+            "description": "AI that scans a yard, builds the quote, routes the crew, and collects payment — the operational cockpit for modern landscaping businesses.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            }
+          }
+        ]
+      }
+    </script>
 
     <!-- Preload critical fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -41,7 +41,7 @@ function buildBladeGeometry(): THREE.BufferGeometry {
 }
 
 export default function GrassMesh({ count, scanZ, scanProgress }: GrassMeshProps) {
-  const meshRef = useRef<THREE.Mesh>(null)
+  const meshRef = useRef<THREE.InstancedMesh>(null)
 
   const { geometry, material } = useMemo(() => {
     const geometry = buildBladeGeometry()
@@ -96,6 +96,6 @@ export default function GrassMesh({ count, scanZ, scanProgress }: GrassMeshProps
   if (count < 1) return null
 
   return (
-    <mesh ref={meshRef} geometry={geometry} material={material} frustumCulled={false} />
+    <instancedMesh ref={meshRef} args={[geometry, material, count]} frustumCulled={false} />
   )
 }

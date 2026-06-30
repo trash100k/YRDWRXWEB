@@ -27,6 +27,9 @@ export function Minimap() {
       {beatIndex >= 3 && (
         <motion.div
           key="minimap"
+          className="minimap"
+          role="img"
+          aria-label="Route map: three jobs on Oak Street"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 16 }}
@@ -64,6 +67,8 @@ export function Minimap() {
             width="176"
             height={MAP_H}
             viewBox={`0 0 ${MAP_W} ${MAP_H}`}
+            aria-hidden="true"
+            focusable="false"
             style={{ display: 'block', overflow: 'visible' }}
           >
             {/* Street grid */}

@@ -36,6 +36,8 @@ export function Nav({ beatIndex }: NavProps) {
           viewBox="0 0 20 20"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+          focusable="false"
         >
           {/* Center circle */}
           <circle cx="10" cy="10" r="4" stroke="#05A845" strokeWidth="1.5" />
@@ -62,10 +64,33 @@ export function Nav({ beatIndex }: NavProps) {
         </span>
       </div>
 
+      {/* Center: Section links */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+        {[
+          { label: 'Features', href: '#features' },
+          { label: 'Pricing', href: '#pricing' },
+          { label: 'FAQ', href: '#faq' },
+        ].map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            style={{
+              color: '#a1a1aa',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
+
       {/* Right: Sign in + CTA */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <a
-          href="#"
+          href="#start"
           style={{
             color: '#a1a1aa',
             fontFamily: 'Inter, sans-serif',

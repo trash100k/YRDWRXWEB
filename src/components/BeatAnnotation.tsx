@@ -24,13 +24,15 @@ export function BeatAnnotation() {
           top: '45%',
           transform: 'translateY(-50%)',
           maxWidth: '260px',
-          textAlign: 'right',
-          // Mobile overrides via media query handled via inline style below (no Tailwind here)
+          // Alignment (desktop right / mobile center) lives in the
+          // `.beat-annotation` class in index.css so the mobile media query
+          // can override it — an inline textAlign would always win.
         }}
         className="beat-annotation"
       >
-        <div
+        <h2
           style={{
+            margin: 0,
             fontFamily: 'Outfit, sans-serif',
             fontWeight: 700,
             fontSize: '22px',
@@ -40,9 +42,10 @@ export function BeatAnnotation() {
           }}
         >
           {beat.annotation}
-        </div>
-        <div
+        </h2>
+        <p
           style={{
+            margin: 0,
             fontFamily: 'Inter, sans-serif',
             fontWeight: 400,
             fontSize: '14px',
@@ -51,7 +54,7 @@ export function BeatAnnotation() {
           }}
         >
           {beat.subAnnotation}
-        </div>
+        </p>
       </motion.div>
     </AnimatePresence>
   )

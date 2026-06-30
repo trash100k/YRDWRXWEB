@@ -1,9 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const stats = [
   { number: "2,300+", label: "Crews Active" },
   { number: "$14M+", label: "Invoiced" },
-  { number: "4.9 ★", label: "App Rating" },
+  { number: "4.9 ★", label: "App Store Rating", sub: "iOS · Android" },
   { number: "48", label: "States" },
 ];
 
@@ -11,14 +11,14 @@ const testimonials = [
   {
     quote:
       "Before YardWorx I was doing quotes on paper. Now Cutty scans the yard and I've got a price before I'm back at the truck. Closed 3 new accounts my first week.",
-    name: "Marcus T.",
+    name: "Marcus Thompson",
     company: "Green Edge LLC",
     location: "Atlanta GA",
   },
   {
     quote:
       "The auto-invoicing alone changed everything. I used to chase payments for weeks. Last month I collected $28k without sending a single text.",
-    name: "Jasmine R.",
+    name: "Jasmine Reyes",
     company: "Sunrise Grounds",
     location: "Dallas TX",
   },
@@ -31,9 +31,40 @@ const testimonials = [
   },
 ];
 
+const integrations = ["Stripe", "QuickBooks", "Twilio", "Google"];
+
+function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+// SSR/render-safe responsive flag. Defaults to desktop layout so the component
+// renders correctly even when reused outside a browser (e.g. ReducedScene).
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(max-width: 767px)");
+    const onChange = () => setIsMobile(mql.matches);
+    onChange();
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return isMobile;
+}
+
 export function SocialProof() {
+  const isMobile = useIsMobile();
+
   return (
-    <div
+    <section
+      aria-labelledby="social-proof-heading"
       style={{
         background: "#09090b",
         width: "100%",
@@ -46,66 +77,174 @@ export function SocialProof() {
           padding: "0 24px",
         }}
       >
+        {/* Stats */}
         <div
           style={{
-            display: "flex",
-            alignItems: "stretch",
-            padding: "56px 0",
+            padding: "56px 0 24px",
             borderBottom: "1px solid rgba(255,255,255,0.05)",
           }}
         >
-          {stats.map((stat, i) => (
-            <React.Fragment key={stat.label}>
-              {i > 0 && (
+          <div
+            style={
+              isMobile
+                ? {
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "24px 16px",
+                  }
+                : {
+                    display: "flex",
+                    alignItems: "stretch",
+                  }
+            }
+          >
+            {stats.map((stat, i) => (
+              <React.Fragment key={stat.label}>
+                {!isMobile && i > 0 && (
+                  <div
+                    style={{
+                      width: "1px",
+                      background: "rgba(255,255,255,0.05)",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
                 <div
                   style={{
-                    width: "1px",
-                    background: "rgba(255,255,255,0.05)",
-                    flexShrink: 0,
-                  }}
-                />
-              )}
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "0 16px",
-                }}
-              >
-                <span
-                  style={{
-                    fontFamily: "'Outfit', sans-serif",
-                    fontWeight: 800,
-                    fontSize: "clamp(36px, 5vw, 56px)",
-                    color: "#ffffff",
-                    lineHeight: 1,
-                    letterSpacing: "-0.02em",
+                    flex: isMobile ? undefined : 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: isMobile ? 0 : "0 16px",
                   }}
                 >
-                  {stat.number}
-                </span>
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 400,
-                    fontSize: "9px",
-                    color: "#52525b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.2em",
-                  }}
-                >
-                  {stat.label}
-                </span>
-              </div>
-            </React.Fragment>
-          ))}
+                  <span
+                    style={{
+                      fontFamily: "'Outfit', sans-serif",
+                      fontWeight: 800,
+                      fontSize: isMobile
+                        ? "clamp(28px, 9vw, 40px)"
+                        : "clamp(36px, 5vw, 56px)",
+                      color: "#ffffff",
+                      lineHeight: 1,
+                      letterSpacing: "-0.02em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {stat.number}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontWeight: 400,
+                      fontSize: "9px",
+                      color: "#71717a",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.2em",
+                      textAlign: "center",
+                    }}
+                  >
+                    {stat.label}
+                  </span>
+                  {stat.sub && (
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontWeight: 400,
+                        fontSize: "8px",
+                        color: "#52525b",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.18em",
+                        textAlign: "center",
+                        marginTop: "-4px",
+                      }}
+                    >
+                      {stat.sub}
+                    </span>
+                  )}
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+
+          <p
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 400,
+              fontSize: "9px",
+              color: "#52525b",
+              textTransform: "uppercase",
+              letterSpacing: "0.2em",
+              textAlign: "center",
+              margin: "24px 0 0 0",
+            }}
+          >
+            Platform metrics, Q2 2026
+          </p>
         </div>
 
+        {/* Integrations trust strip */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "16px 28px",
+            padding: "28px 0",
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontWeight: 400,
+              fontSize: "9px",
+              color: "#71717a",
+              textTransform: "uppercase",
+              letterSpacing: "0.22em",
+            }}
+          >
+            Integrates with
+          </span>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "12px 28px",
+            }}
+          >
+            {integrations.map((name) => (
+              <span
+                key={name}
+                style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontWeight: 700,
+                  fontSize: "16px",
+                  color: "#ffffff",
+                  opacity: 0.4,
+                  letterSpacing: "-0.01em",
+                  transition: "opacity 0.2s ease",
+                  cursor: "default",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "0.4";
+                }}
+              >
+                {name}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Testimonials header */}
         <div style={{ padding: "56px 0 40px" }}>
           <h2
+            id="social-proof-heading"
             style={{
               fontFamily: "'Outfit', sans-serif",
               fontWeight: 800,
@@ -122,19 +261,21 @@ export function SocialProof() {
               fontFamily: "'Inter', sans-serif",
               fontWeight: 400,
               fontSize: "14px",
-              color: "#71717a",
+              color: "#9a9aa2",
               margin: 0,
               lineHeight: 1.6,
             }}
           >
-            From landscapers who were skeptical before their first Tuesday.
+            Owner-operators who switched and never went back — and the numbers to
+            prove it.
           </p>
         </div>
 
+        {/* Testimonial cards */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "20px",
             paddingBottom: "0",
           }}
@@ -149,23 +290,23 @@ export function SocialProof() {
                 padding: "32px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "20px",
+                gap: "16px",
               }}
             >
-              <span
+              {/* Star rating */}
+              <div
+                aria-label="Rated 5 out of 5 stars"
                 style={{
-                  fontFamily: "'Outfit', sans-serif",
-                  fontWeight: 800,
-                  fontSize: "48px",
+                  display: "flex",
+                  gap: "2px",
+                  fontSize: "12px",
                   color: "#2ad16a",
-                  opacity: 0.4,
                   lineHeight: 1,
-                  display: "block",
-                  marginBottom: "-8px",
                 }}
               >
-                &ldquo;
-              </span>
+                <span aria-hidden="true">★★★★★</span>
+              </div>
+
               <p
                 style={{
                   fontFamily: "'Inter', sans-serif",
@@ -179,42 +320,98 @@ export function SocialProof() {
               >
                 {t.quote}
               </p>
+
+              {/* Author */}
               <div
                 style={{
-                  borderLeft: "2px solid rgba(5,168,69,0.3)",
-                  paddingLeft: "14px",
                   display: "flex",
-                  flexDirection: "column",
-                  gap: "3px",
+                  alignItems: "center",
+                  gap: "12px",
                 }}
               >
-                <span
+                <div
+                  aria-hidden="true"
                   style={{
+                    width: "44px",
+                    height: "44px",
+                    flexShrink: 0,
+                    borderRadius: "50%",
+                    background:
+                      "linear-gradient(135deg, #05A845 0%, #2ad16a 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     fontFamily: "'Outfit', sans-serif",
                     fontWeight: 700,
-                    fontSize: "14px",
+                    fontSize: "16px",
                     color: "#ffffff",
-                    lineHeight: 1.3,
+                    letterSpacing: "0.02em",
                   }}
                 >
-                  {t.name}
-                </span>
-                <span
+                  {initialsOf(t.name)}
+                </div>
+                <div
                   style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontWeight: 400,
-                    fontSize: "13px",
-                    color: "#71717a",
-                    lineHeight: 1.4,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "3px",
+                    minWidth: 0,
                   }}
                 >
-                  {t.company} · {t.location}
-                </span>
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "'Outfit', sans-serif",
+                        fontWeight: 700,
+                        fontSize: "14px",
+                        color: "#ffffff",
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {t.name}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontWeight: 400,
+                        fontSize: "9px",
+                        color: "#2ad16a",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.14em",
+                        border: "1px solid rgba(42,209,106,0.4)",
+                        borderRadius: "999px",
+                        padding: "2px 7px",
+                        lineHeight: 1,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Verified
+                    </span>
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 400,
+                      fontSize: "13px",
+                      color: "#9a9aa2",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {t.company} · {t.location}
+                  </span>
+                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
