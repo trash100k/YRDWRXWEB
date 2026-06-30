@@ -125,16 +125,25 @@ export const GRASS_FRAGMENT_SHADER = /* glsl */`
 
     // Subsurface scatter: warm green backlit translucency
     float sss  = pow(vTip, 2.5) * vGreened;
-    color += sss * vec3(0.12, 0.62, 0.16) * 0.38;
+    color += sss * vec3(0.12, 0.62, 0.16) * 0.48;
 
-    // Bioluminescent pulse
+    // Primary bioluminescent pulse — boosted amplitude
     float pulse = 0.5 + 0.5 * sin(uTime * 2.5 + vWorldPos.x * 2.8 + vWorldPos.z * 2.1);
-    float bio   = pow(vTip, 3.5) * vGreened * pulse * 0.52;
+    float bio   = pow(vTip, 3.0) * vGreened * pulse * 0.88;
     color += bio * afterTip;
+
+    // Secondary traveling bio-wave (orthogonal direction, teal tint)
+    float pulse2 = 0.5 + 0.5 * sin(uTime * 1.8 + vWorldPos.x * -1.9 + vWorldPos.z * 3.4);
+    float bio2   = pow(vTip, 4.0) * vGreened * pulse2 * 0.42;
+    color += bio2 * vec3(0.06, 0.72, 0.58);
 
     // Sporadic sparkle — individual blade flashes
     float spark = pow(max(0.0, sin(uTime * 7.5 + vWorldPos.x * 8.4 + vWorldPos.z * 6.6)), 22.0);
-    color += spark * vTip * vGreened * vec3(0.5, 1.0, 0.52) * 0.75;
+    color += spark * vTip * vGreened * vec3(0.5, 1.0, 0.52) * 0.80;
+
+    // Dew sparkle: tight specular hot-spots on blade tips
+    float dew = pow(max(0.0, sin(uTime * 3.8 + vWorldPos.x * 11.3 + vWorldPos.z * 9.7)), 18.0);
+    color += dew * vTip * vTip * vGreened * vec3(0.85, 1.0, 0.92) * 1.20;
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -183,6 +192,7 @@ export const SKY_FRAGMENT_SHADER = /* glsl */`
   uniform vec3  uSkyBot;
   uniform vec3  uHorizon;
   uniform float uAfter;
+  uniform float uScanGlow;
 
   varying vec3 vDir;
 
@@ -191,14 +201,35 @@ export const SKY_FRAGMENT_SHADER = /* glsl */`
   void main() {
     float h = vDir.y;
 
-    // Zenith → horizon gradient
+    // Base zenith → horizon gradient
     float t     = smoothstep(0.0, 0.85, h);
-    float above = smoothstep(-0.05, 0.15, h);
+    float above = smoothstep(-0.08, 0.22, h);
     vec3  sky   = mix(uHorizon, mix(uSkyBot, uSkyTop, t), above);
 
-    // Stars fade out as scene greens
-    float starFade = clamp(1.0 - uAfter * 2.5, 0.0, 1.0);
-    if (h > 0.06 && starFade > 0.01) {
+    // ─── Dramatic pre-dawn / dawn color bands (additive, driven by uAfter) ───
+    // Crimson horizon band  (h ≈ -0.05)
+    float band0 = exp(-pow((h + 0.05) * 8.0, 2.0));
+    sky += vec3(0.82, 0.08, 0.03) * band0 * uAfter * 1.15;
+
+    // Deep orange rise  (h ≈ 0.04)
+    float band1 = exp(-pow((h - 0.04) * 6.0, 2.0));
+    sky += vec3(1.00, 0.38, 0.05) * band1 * uAfter * 0.88;
+
+    // Golden glow  (h ≈ 0.18)
+    float band2 = exp(-pow((h - 0.18) * 4.5, 2.0));
+    sky += vec3(0.96, 0.70, 0.16) * band2 * uAfter * 0.52;
+
+    // Purple-violet zenith shift  (h ≈ 0.35)
+    float band3 = exp(-pow((h - 0.35) * 3.2, 2.0));
+    sky += vec3(0.22, 0.08, 0.48) * band3 * uAfter * 0.38;
+
+    // AI scan energy on horizon — green sweep (h ≈ -0.02)
+    float scanBand = exp(-pow((h + 0.02) * 10.0, 2.0));
+    sky += vec3(0.04, 0.92, 0.38) * uScanGlow * scanBand * 0.90;
+
+    // Stars: fade with after progress AND scan glow
+    float starFade = clamp(1.0 - uAfter * 2.2 - uScanGlow * 2.5, 0.0, 1.0);
+    if (h > 0.05 && starFade > 0.01) {
       float sx   = vDir.x / (abs(vDir.y) + 0.001);
       float sz   = vDir.z / (abs(vDir.y) + 0.001);
       float seed = hash(floor(sx * 140.0) + floor(sz * 140.0) * 93.0 + 7.3);
@@ -206,9 +237,9 @@ export const SKY_FRAGMENT_SHADER = /* glsl */`
       sky += vec3(brt * 0.80) * starFade * clamp(h, 0.0, 1.0);
     }
 
-    // Subtle star twinkle overlay for extra depth
-    float sx2 = vDir.x / (abs(vDir.y) + 0.001) * 0.5;
-    float sz2 = vDir.z / (abs(vDir.y) + 0.001) * 0.5;
+    // Dim twinkle layer
+    float sx2   = vDir.x / (abs(vDir.y) + 0.001) * 0.5;
+    float sz2   = vDir.z / (abs(vDir.y) + 0.001) * 0.5;
     float seed2 = hash(floor(sx2 * 240.0) + floor(sz2 * 240.0) * 199.0 + 3.1);
     float dimStar = max(0.0, seed2 - 0.988) / 0.012 * 0.35;
     sky += vec3(dimStar) * starFade * clamp(h, 0.0, 1.0);
@@ -385,5 +416,144 @@ export const RING_FRAGMENT_SHADER = /* glsl */`
     float glow = (f1 + f2 + f3) * uOpacity * max(0.0, 1.05 - r * 0.55);
     vec3  color = vec3(0.04, 0.88, 0.38);
     gl_FragColor = vec4(color, clamp(glow, 0.0, 1.0));
+  }
+`
+
+// ── Morning mist — ground-level wispy fog, clears as scan passes ──────
+export const MIST_VERTEX_SHADER = /* glsl */`
+  varying vec2 vUv;
+  varying vec3 vWorldPos;
+
+  void main() {
+    vUv = uv;
+    vec4 worldPos4 = modelMatrix * vec4(position, 1.0);
+    vWorldPos = worldPos4.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPos4;
+  }
+`
+
+export const MIST_FRAGMENT_SHADER = /* glsl */`
+  uniform float uTime;
+  uniform float uScanZ;
+  uniform float uOpacity;
+
+  varying vec2 vUv;
+  varying vec3 vWorldPos;
+
+  float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float n2(vec2 p) {
+    vec2 i = floor(p); vec2 f = p - i;
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h2(i), h2(i+vec2(1,0)),f.x), mix(h2(i+vec2(0,1)), h2(i+vec2(1,1)),f.x), f.y);
+  }
+
+  void main() {
+    vec2 wUv = vWorldPos.xz;
+
+    // Multi-octave drifting noise
+    float n1  = n2(wUv * 0.22 + vec2(uTime * 0.040, uTime * 0.025));
+    float n2v = n2(wUv * 0.50 + vec2(-uTime * 0.030, uTime * 0.055));
+    float n3  = n2(wUv * 1.10 + vec2(uTime * 0.085, -uTime * 0.035));
+    float mist = n1 * 0.55 + n2v * 0.30 + n3 * 0.15;
+    mist = smoothstep(0.40, 0.78, mist);
+
+    // Dissipate as scan sweeps past this position
+    float cleared = clamp((uScanZ - vWorldPos.z + 1.5) / 4.0, 0.0, 1.0);
+    mist *= (1.0 - cleared * cleared);
+
+    // Rectangular edge soft fade
+    vec2 center = abs(vUv - 0.5) * 2.0;
+    float edge  = 1.0 - smoothstep(0.60, 1.0, max(center.x, center.y));
+
+    float alpha = mist * edge * uOpacity * 0.22;
+    gl_FragColor = vec4(vec3(0.60, 0.72, 0.88), clamp(alpha, 0.0, 1.0));
+  }
+`
+
+// ── God-ray shafts — volumetric light from sun billboard ─────────────
+export const GOD_RAY_VERTEX_SHADER = /* glsl */`
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+export const GOD_RAY_FRAGMENT_SHADER = /* glsl */`
+  uniform float uOpacity;
+  uniform float uTime;
+
+  varying vec2 vUv;
+
+  void main() {
+    // plane top (vUv.y=1) is the sun/root; bottom (vUv.y=0) is the far tip
+    float fromRoot = 1.0 - vUv.y;  // 0 at sun, 1 at far tip
+
+    // Soft side edges
+    float edgeX = 1.0 - smoothstep(0.22, 0.50, abs(vUv.x - 0.5) * 2.0);
+
+    // Exponential fade along length — bright at sun root, invisible at tip
+    float lenFade = pow(1.0 - fromRoot, 1.75);
+
+    // Slow shimmer along the ray
+    float shimmer = 0.78 + 0.22 * sin(uTime * 1.5 + vUv.y * 10.0);
+
+    float brightness = lenFade * edgeX * shimmer;
+
+    // Warm golden at sun root → orange-amber at tip
+    vec3 color = mix(vec3(1.00, 0.90, 0.58), vec3(1.00, 0.58, 0.14), fromRoot * 0.65);
+
+    float alpha = brightness * uOpacity;
+    gl_FragColor = vec4(color * (brightness + 0.15), clamp(alpha, 0.0, 1.0));
+  }
+`
+
+// ── Ground aura — bioluminescent noise carpet post-scan ──────────────
+export const AURA_VERTEX_SHADER = /* glsl */`
+  varying vec2 vUv;
+  varying vec3 vWorldPos;
+
+  void main() {
+    vUv = uv;
+    vec4 worldPos4 = modelMatrix * vec4(position, 1.0);
+    vWorldPos = worldPos4.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPos4;
+  }
+`
+
+export const AURA_FRAGMENT_SHADER = /* glsl */`
+  uniform float uTime;
+  uniform float uOpacity;
+
+  varying vec2 vUv;
+  varying vec3 vWorldPos;
+
+  float h2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float n2(vec2 p) {
+    vec2 i = floor(p); vec2 f = p - i;
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h2(i), h2(i+vec2(1,0)),f.x), mix(h2(i+vec2(0,1)), h2(i+vec2(1,1)),f.x), f.y);
+  }
+
+  void main() {
+    vec2 wUv = vWorldPos.xz;
+
+    // Flowing multi-octave noise
+    float n1  = n2(wUv * 0.45 + vec2(uTime * 0.10, uTime * 0.07));
+    float n2v = n2(wUv * 1.00 + vec2(-uTime * 0.07, uTime * 0.13));
+    float n3  = n2(wUv * 2.20 + vec2(uTime * 0.17, -uTime * 0.09));
+    float aura = n1 * 0.50 + n2v * 0.30 + n3 * 0.20;
+    aura = smoothstep(0.42, 0.82, aura);
+
+    // Organic pulse
+    float pulse = 0.72 + 0.28 * sin(uTime * 2.2 + vWorldPos.x * 1.5 + vWorldPos.z * 1.2);
+    aura *= pulse;
+
+    // Radial vignette so it fades at scene edges
+    vec2  centered = (vUv - 0.5) * 2.0;
+    float edge = 1.0 - smoothstep(0.55, 1.0, length(centered));
+
+    float alpha = aura * edge * uOpacity * 0.26;
+    gl_FragColor = vec4(vec3(0.04, 0.88, 0.42), clamp(alpha, 0.0, 1.0));
   }
 `

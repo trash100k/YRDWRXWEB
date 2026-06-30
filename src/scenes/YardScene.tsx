@@ -1,7 +1,7 @@
 import { useRef, useMemo, Suspense, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Float, Html } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette, ChromaticAberration, DepthOfField } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, ChromaticAberration, DepthOfField, Noise } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { useBeatStore } from '@/stores/beatStore'
@@ -14,6 +14,9 @@ import {
   RING_VERTEX_SHADER, RING_FRAGMENT_SHADER,
   WAKE_VERTEX_SHADER, WAKE_FRAGMENT_SHADER,
   FLARE_VERTEX_SHADER, FLARE_FRAGMENT_SHADER,
+  MIST_VERTEX_SHADER, MIST_FRAGMENT_SHADER,
+  GOD_RAY_VERTEX_SHADER, GOD_RAY_FRAGMENT_SHADER,
+  AURA_VERTEX_SHADER, AURA_FRAGMENT_SHADER,
 } from './shaders'
 
 // ─── colors ──────────────────────────────────────────────────────────
@@ -38,7 +41,6 @@ function lerp(a: number, b: number, t: number) { return a + (b - a) * Math.min(1
 
 // ─── SKY DOME ────────────────────────────────────────────────────────
 function SkyDome() {
-  const matRef = useRef<THREE.ShaderMaterial>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
   const beatT     = useBeatStore(s => s.beatT)
 
@@ -46,29 +48,33 @@ function SkyDome() {
     vertexShader:   SKY_VERTEX_SHADER,
     fragmentShader: SKY_FRAGMENT_SHADER,
     uniforms: {
-      uSkyTop:  { value: new THREE.Color(0x020510) },
-      uSkyBot:  { value: new THREE.Color(0x050c1a) },
-      uHorizon: { value: new THREE.Color(0x0a1428) },
-      uAfter:   { value: 0.0 },
+      uSkyTop:   { value: new THREE.Color(0x020510) },
+      uSkyBot:   { value: new THREE.Color(0x050c1a) },
+      uHorizon:  { value: new THREE.Color(0x0a1428) },
+      uAfter:    { value: 0.0 },
+      uScanGlow: { value: 0.0 },
     },
     side:       THREE.BackSide,
     depthWrite: false,
   }), [])
 
   useFrame((_, delta) => {
-    const progress = beatIndex + beatT
-    const afterT   = Math.min(1, Math.max(0, (progress - 1.0) / 1.5))
-    material.uniforms.uAfter.value = lerp(material.uniforms.uAfter.value, afterT, delta * 1.0)
+    const progress  = beatIndex + beatT
+    const afterT    = Math.min(1, Math.max(0, (progress - 1.0) / 1.5))
+    const scanGlow  = beatIndex === 1 ? beatT * 0.88 : 0
 
-    // Night → dim pre-dawn sky
+    material.uniforms.uAfter.value    = lerp(material.uniforms.uAfter.value, afterT, delta * 1.0)
+    material.uniforms.uScanGlow.value = lerp(material.uniforms.uScanGlow.value, scanGlow, delta * 3.5)
+
+    // Night: deep navy → Dawn: keep dark but shift warmer (additive bands do the color drama)
     material.uniforms.uSkyTop.value.lerpColors(
-      new THREE.Color(0x020510), new THREE.Color(0x071428), afterT
+      new THREE.Color(0x020510), new THREE.Color(0x0c0820), afterT
     )
     material.uniforms.uSkyBot.value.lerpColors(
-      new THREE.Color(0x050c1a), new THREE.Color(0x0a1e30), afterT
+      new THREE.Color(0x050c1a), new THREE.Color(0x0d0e1c), afterT
     )
     material.uniforms.uHorizon.value.lerpColors(
-      new THREE.Color(0x0a1428), new THREE.Color(0x12283a), afterT
+      new THREE.Color(0x0a1428), new THREE.Color(0x160a04), afterT
     )
   })
 
@@ -106,11 +112,18 @@ function CameraController() {
     const [tx, ty, tz] = targets[beat]
     lookRef.current.lerp(new THREE.Vector3(tx, ty, tz), delta * 2.0)
 
-    // Slow cinematic orbit with gentle drift
-    const orbitR = 12 + Math.sin(t * 0.14) * 0.8
+    // Orbit radius: pull in dramatically during scan, then wider reveal
+    const baseR = beatIndex === 1 ? lerp(12, 7.5, beatT)
+                : beatIndex >= 2  ? 11.0
+                : 12.0
+    const orbitR = baseR + Math.sin(t * 0.14) * 0.8
     const orbitA = t * 0.04
+
+    // Camera height: lower during scan for tension, open up after
+    const targetY = beatIndex === 1 ? lerp(8, 5.5, beatT) : 8 + Math.sin(t * 0.28) * 0.25
+
     camera.position.x = lerp(camera.position.x, orbitR * Math.sin(orbitA) + Math.sin(t * 0.18) * 0.4, delta * 0.6)
-    camera.position.y = lerp(camera.position.y, 8 + Math.sin(t * 0.28) * 0.25, delta * 0.6)
+    camera.position.y = lerp(camera.position.y, targetY, delta * 0.6)
     camera.position.z = lerp(camera.position.z, orbitR * Math.cos(orbitA) + Math.cos(t * 0.12) * 0.3, delta * 0.6)
     camera.lookAt(lookRef.current)
   })
@@ -944,6 +957,121 @@ function CrewPins() {
   )
 }
 
+// ─── MORNING MIST — ground-level fog that clears as scan passes ──────
+function MorningMist() {
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+
+  const material = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader:   MIST_VERTEX_SHADER,
+    fragmentShader: MIST_FRAGMENT_SHADER,
+    uniforms: {
+      uTime:    { value: 0 },
+      uScanZ:   { value: -20 },
+      uOpacity: { value: 0 },
+    },
+    transparent: true,
+    depthWrite:  false,
+    side:        THREE.DoubleSide,
+  }), [])
+
+  useFrame((_, delta) => {
+    material.uniforms.uTime.value += delta
+    const sz = beatIndex === 1
+      ? lerp(-10, 10, 1 - Math.pow(1 - beatT, 2.5))
+      : beatIndex >= 2 ? 12 : -20
+    material.uniforms.uScanZ.value = sz
+    // Present pre-scan, dissipate during and after
+    const target = beatIndex === 0 ? 1.0 : beatIndex === 1 ? lerp(1.0, 0.0, beatT) : 0
+    material.uniforms.uOpacity.value = lerp(material.uniforms.uOpacity.value, target, delta * 1.5)
+  })
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.28, 0]}>
+      <planeGeometry args={[26, 20]} />
+      <primitive object={material} />
+    </mesh>
+  )
+}
+
+// ─── GOD-RAY SHAFTS — volumetric light from sun, post-scan ───────────
+function GodRayShafts() {
+  const groupRef  = useRef<THREE.Group>(null)
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+
+  const material = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader:   GOD_RAY_VERTEX_SHADER,
+    fragmentShader: GOD_RAY_FRAGMENT_SHADER,
+    uniforms: {
+      uOpacity: { value: 0 },
+      uTime:    { value: 0 },
+    },
+    transparent: true,
+    depthWrite:  false,
+    depthTest:   false,
+    blending:    THREE.AdditiveBlending,
+    side:        THREE.DoubleSide,
+  }), [])
+
+  const shafts = useMemo(() =>
+    Array.from({ length: 9 }, (_, i) => ({
+      angle: (i / 9) * Math.PI * 2,
+      width: 0.16 + (i % 3) * 0.09,
+      len:   7.5 + (i % 4) * 1.8,
+    }))
+  , [])
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+    material.uniforms.uTime.value += delta
+    groupRef.current.quaternion.copy(state.camera.quaternion)
+    const afterT = beatIndex >= 2 ? Math.min(1, (beatIndex - 2 + beatT) / 1.8) : 0
+    material.uniforms.uOpacity.value = lerp(material.uniforms.uOpacity.value, afterT * 0.58, delta * 1.2)
+  })
+
+  return (
+    <group ref={groupRef} position={SUN_POS} frustumCulled={false}>
+      {shafts.map((s, i) => (
+        <mesh key={i} rotation={[0, 0, s.angle]} position={[0, -s.len / 2, 0]} material={material}>
+          <planeGeometry args={[s.width, s.len]} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+// ─── GROUND AURA — bioluminescent noise carpet, post-scan ────────────
+function GroundAura() {
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+
+  const material = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader:   AURA_VERTEX_SHADER,
+    fragmentShader: AURA_FRAGMENT_SHADER,
+    uniforms: {
+      uTime:    { value: 0 },
+      uOpacity: { value: 0 },
+    },
+    transparent: true,
+    depthWrite:  false,
+    blending:    THREE.AdditiveBlending,
+  }), [])
+
+  useFrame((_, delta) => {
+    material.uniforms.uTime.value += delta
+    const afterT = beatIndex >= 2 ? Math.min(1, (beatIndex - 2 + beatT) / 1.0) : 0
+    material.uniforms.uOpacity.value = lerp(material.uniforms.uOpacity.value, afterT * 0.95, delta * 1.5)
+  })
+
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 0]}>
+      <planeGeometry args={[24, 18]} />
+      <primitive object={material} />
+    </mesh>
+  )
+}
+
 // ─── SCAN WAKE — sparkle burst trails the scan line ───────────────────
 function ScanWake() {
   const beatIndex = useBeatStore(s => s.beatIndex)
@@ -1011,12 +1139,14 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
       <CameraController />
       <SceneLighting />
       <Ground />
+      <MorningMist />
       <GreenWave />
       <Structures />
       <BarePatches />
       <Hedges />
       <Trees />
       <GrassMesh count={quality.grassCount} scanZ={scanZ} scanProgress={scanProgress} />
+      <GroundAura />
       <ScanPlane />
       <ScanCurtain />
       <ScanWake />
@@ -1024,6 +1154,7 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
       {quality.tier !== 'MINIMAL' && <FloatingParticles count={particleCount} />}
       <CuttyReticle />
       <LensFlare />
+      <GodRayShafts />
       <YardLabels />
       <JobCard />
       <InvoicePanel />
@@ -1044,6 +1175,7 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
             modulationOffset={0}
           />
           <Vignette offset={0.42} darkness={0.72} />
+          <Noise opacity={0.038} />
         </EffectComposer>
       )}
     </>
