@@ -10,17 +10,20 @@ import GrassMesh from './GrassMesh'
 
 // ─── colors ──────────────────────────────────────────────────────────
 const C = {
-  BEFORE_GRASS: new THREE.Color(0x3d4e35),
-  AFTER_GRASS:  new THREE.Color(0x05a845),
-  HEDGE:        new THREE.Color(0x1e2d18),
-  HEDGE_AFTER:  new THREE.Color(0x2a4a1e),
-  HOUSE:        new THREE.Color(0x1e2330),
-  CONCRETE:     new THREE.Color(0x52545c),
-  MULCH:        new THREE.Color(0x4a3520),
-  TRUNK:        new THREE.Color(0x2d1f0e),
-  CANOPY:       new THREE.Color(0x1a2810),
-  FOREST:       new THREE.Color(0x05a845),
-  SCAN_GLOW:    new THREE.Color(0x2ad16a),
+  BEFORE_GRASS:  new THREE.Color(0x3d4e35),
+  AFTER_GRASS:   new THREE.Color(0x05a845),
+  HEDGE:         new THREE.Color(0x243d1a),
+  HEDGE_AFTER:   new THREE.Color(0x3a7828),
+  HOUSE:         new THREE.Color(0x2d3a52),
+  ROOF:          new THREE.Color(0x1c2235),
+  CONCRETE:      new THREE.Color(0x52545c),
+  MULCH:         new THREE.Color(0x4a3520),
+  TRUNK:         new THREE.Color(0x3d2a12),
+  CANOPY:        new THREE.Color(0x243818),
+  CANOPY_AFTER:  new THREE.Color(0x2e7820),
+  FOREST:        new THREE.Color(0x05a845),
+  SCAN_GLOW:     new THREE.Color(0x2ad16a),
+  WINDOW_WARM:   new THREE.Color(0x4a7ab0),
 }
 
 function lerp(a: number, b: number, t: number) { return a + (b - a) * Math.min(1, Math.max(0, t)) }
@@ -67,35 +70,50 @@ function SceneLighting() {
   const keyRef     = useRef<THREE.DirectionalLight>(null)
   const rimRef     = useRef<THREE.DirectionalLight>(null)
   const fillRef    = useRef<THREE.PointLight>(null)
+  const hemiRef    = useRef<THREE.HemisphereLight>(null)
+  const sunRef     = useRef<THREE.DirectionalLight>(null)
 
   const beatIndex = useBeatStore(s => s.beatIndex)
   const beatT     = useBeatStore(s => s.beatT)
 
   useFrame((_, delta) => {
-    if (!keyRef.current || !fillRef.current || !ambientRef.current) return
+    if (!keyRef.current || !fillRef.current || !ambientRef.current || !hemiRef.current || !sunRef.current) return
 
     const progress = beatIndex + beatT
     const scanActive = progress > 0.8 && progress < 2.2
     const afterScan  = progress >= 1.5
+    const afterT     = afterScan ? Math.min(1, (progress - 1.5) / 1.5) : 0
 
-    const targetFill = afterScan ? 2.2 : scanActive ? lerp(0, 2.2, (progress - 0.8) / 0.7) : 0
+    // Fill green bounce light
+    const targetFill = afterScan ? 2.8 : scanActive ? lerp(0, 2.8, (progress - 0.8) / 0.7) : 0
     fillRef.current.intensity = lerp(fillRef.current.intensity, targetFill, delta * 2.5)
 
-    const targetKeyIntensity = afterScan ? 2.0 : 1.6
+    // Key light: cool blue overcast → warm golden sun
+    const targetKeyIntensity = afterScan ? 2.2 : 1.6
     keyRef.current.intensity = lerp(keyRef.current.intensity, targetKeyIntensity, delta * 1.5)
+    const keyColorTarget = afterScan ? new THREE.Color(0xffd080) : new THREE.Color(0xb8cce0)
+    keyRef.current.color.lerp(keyColorTarget, delta * 1.4)
 
-    const keyColorTarget = afterScan
-      ? new THREE.Color(0xffd4a0)
-      : new THREE.Color(0xc0cce0)
-    keyRef.current.color.lerp(keyColorTarget, delta * 1.2)
+    // Hemisphere: dark night sky/ground → warm afternoon sky/green ground
+    const skyBefore  = new THREE.Color(0x0a1020)
+    const skyAfter   = new THREE.Color(0x6090c0)
+    const gndBefore  = new THREE.Color(0x0d1008)
+    const gndAfter   = new THREE.Color(0x2a5a0a)
+    hemiRef.current.color.lerpColors(skyBefore, skyAfter, afterT)
+    hemiRef.current.groundColor.lerpColors(gndBefore, gndAfter, afterT)
+    hemiRef.current.intensity = lerp(0.4, 1.2, afterT)
+
+    // Warm sun directional ramps up post-scan
+    sunRef.current.intensity = lerp(sunRef.current.intensity, afterScan ? 1.6 : 0, delta * 1.8)
   })
 
   return (
     <>
-      <ambientLight ref={ambientRef} color={0x1a2030} intensity={0.7} />
+      <ambientLight ref={ambientRef} color={0x18202e} intensity={0.6} />
+      <hemisphereLight ref={hemiRef} args={[0x0a1020, 0x0d1008, 0.4]} position={[0, 20, 0]} />
       <directionalLight
         ref={keyRef}
-        color={0xc0cce0}
+        color={0xb8cce0}
         intensity={1.6}
         position={[-8, 12, -5]}
         castShadow
@@ -108,8 +126,9 @@ function SceneLighting() {
         shadow-camera-bottom={-14}
         shadow-bias={-0.001}
       />
-      <directionalLight ref={rimRef} color={0x223355} intensity={0.8} position={[5, 6, -10]} />
-      <pointLight ref={fillRef} color={0x1a5c2a} intensity={0} distance={30} position={[8, 4, 4]} />
+      <directionalLight ref={rimRef} color={0x1a3050} intensity={0.7} position={[5, 6, -10]} />
+      <directionalLight ref={sunRef} color={0xffb060} intensity={0} position={[12, 10, 8]} />
+      <pointLight ref={fillRef} color={0x20a050} intensity={0} distance={32} position={[8, 4, 4]} />
     </>
   )
 }
@@ -151,12 +170,14 @@ function ScanPlane() {
 
   return (
     <>
-      <mesh ref={planeRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, -12]}>
-        <planeGeometry args={[24, 0.08]} />
-        <meshBasicMaterial color={0x2ad16a} transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+      {/* Core bright line */}
+      <mesh ref={planeRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.09, -12]}>
+        <planeGeometry args={[24, 0.12]} />
+        <meshBasicMaterial color={0x80ffb0} transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
-      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.12, -12]}>
-        <planeGeometry args={[24, 0.6]} />
+      {/* Wide glow halo */}
+      <mesh ref={glowRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.07, -12]}>
+        <planeGeometry args={[24, 2.8]} />
         <meshBasicMaterial color={0x2ad16a} transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
     </>
@@ -172,17 +193,16 @@ function Ground() {
   useFrame((_, delta) => {
     if (!matRef.current) return
     const afterAmount = beatIndex === 1 ? beatT : beatIndex >= 2 ? 1 : 0
-    matRef.current.color.lerp(
-      afterAmount > 0.5 ? C.AFTER_GRASS : C.BEFORE_GRASS,
-      delta * 1.8
-    )
-    matRef.current.roughness = lerp(matRef.current.roughness, 0.85, delta)
+    const afterScan = afterAmount > 0.5
+    matRef.current.color.lerp(afterScan ? C.AFTER_GRASS : C.BEFORE_GRASS, delta * 1.8)
+    matRef.current.roughness = lerp(matRef.current.roughness, afterScan ? 0.8 : 0.95, delta)
+    matRef.current.emissiveIntensity = lerp(matRef.current.emissiveIntensity, afterScan ? 0.05 : 0, delta * 1.5)
   })
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[22, 18, 32, 32]} />
-      <meshStandardMaterial ref={matRef} color={C.BEFORE_GRASS} roughness={0.95} metalness={0} />
+      <meshStandardMaterial ref={matRef} color={C.BEFORE_GRASS} roughness={0.95} metalness={0} emissive={C.AFTER_GRASS} emissiveIntensity={0} />
     </mesh>
   )
 }
@@ -208,7 +228,7 @@ function GreenWave() {
       const sx = sectionXs[i]
       const progress = smoothstep(sx - 4, sx + 2, scanZ)
       mat.color.lerpColors(C.BEFORE_GRASS, C.AFTER_GRASS, progress)
-      mat.emissiveIntensity = progress * 0.1
+      mat.emissiveIntensity = progress * 0.35
     })
   })
 
@@ -223,7 +243,7 @@ function GreenWave() {
           receiveShadow
         >
           <planeGeometry args={[3.5, 10]} />
-          <meshStandardMaterial color={C.BEFORE_GRASS} roughness={0.9} emissive={C.AFTER_GRASS} emissiveIntensity={0} />
+          <meshStandardMaterial color={C.BEFORE_GRASS} roughness={0.82} emissive={C.AFTER_GRASS} emissiveIntensity={0} />
         </mesh>
       ))}
     </>
@@ -237,14 +257,16 @@ function Hedges() {
   const beatIndex = useBeatStore(s => s.beatIndex)
 
   useFrame((_, delta) => {
+    const afterScan = beatIndex >= 1
     matsRef.current.forEach(mat => {
-      const target = beatIndex >= 1 ? C.HEDGE_AFTER : C.HEDGE
-      mat.color.lerp(target, delta * 1.0)
+      const target = afterScan ? C.HEDGE_AFTER : C.HEDGE
+      mat.color.lerp(target, delta * 1.2)
+      mat.emissiveIntensity = lerp(mat.emissiveIntensity, afterScan ? 0.08 : 0, delta * 1.5)
     })
   })
 
   const hedgeMat = useMemo(() => {
-    const m = new THREE.MeshStandardMaterial({ color: C.HEDGE, roughness: 0.9 })
+    const m = new THREE.MeshStandardMaterial({ color: C.HEDGE, roughness: 0.88, emissive: C.HEDGE_AFTER, emissiveIntensity: 0 })
     matsRef.current.push(m)
     return m
   }, [])
@@ -300,25 +322,30 @@ function Structures() {
       {/* House body */}
       <mesh position={[0, 2.5, -7.5]} castShadow receiveShadow>
         <boxGeometry args={[11, 5, 4]} />
-        <meshStandardMaterial color={C.HOUSE} roughness={0.85} />
+        <meshStandardMaterial color={C.HOUSE} roughness={0.82} metalness={0.05} />
       </mesh>
 
       {/* Roof */}
       <mesh position={[0, 6.5, -7.5]} rotation={[0, Math.PI / 4, 0]} castShadow>
         <cylinderGeometry args={[0, 7.8, 3, 4]} />
-        <meshStandardMaterial color={0x141824} roughness={0.95} />
+        <meshStandardMaterial color={C.ROOF} roughness={0.92} />
       </mesh>
 
       {/* Garage door */}
       <mesh position={[-3.0, 1.25, -5.6]}>
         <boxGeometry args={[3.5, 2.5, 0.1]} />
-        <meshStandardMaterial color={0x2e3240} roughness={0.7} />
+        <meshStandardMaterial color={0x3a4260} roughness={0.65} metalness={0.1} />
       </mesh>
 
-      {/* Window */}
+      {/* Window — with interior warm glow */}
       <mesh position={[2.5, 3.5, -5.6]}>
         <boxGeometry args={[1.8, 1.2, 0.05]} />
-        <meshStandardMaterial color={0x1a2a3a} roughness={0.2} metalness={0.3} />
+        <meshStandardMaterial color={0x2a3a50} roughness={0.15} metalness={0.4} emissive={C.WINDOW_WARM} emissiveIntensity={0.55} />
+      </mesh>
+      {/* Second window */}
+      <mesh position={[-0.8, 3.5, -5.6]}>
+        <boxGeometry args={[1.4, 1.0, 0.05]} />
+        <meshStandardMaterial color={0x2a3a50} roughness={0.15} metalness={0.4} emissive={C.WINDOW_WARM} emissiveIntensity={0.4} />
       </mesh>
 
       {/* Driveway */}
@@ -354,6 +381,17 @@ function Structures() {
 
 // ─── TREES ───────────────────────────────────────────────────────────
 function Trees() {
+  const canopyMatsRef = useRef<THREE.MeshStandardMaterial[]>([])
+  const beatIndex = useBeatStore(s => s.beatIndex)
+
+  useFrame((_, delta) => {
+    const afterScan = beatIndex >= 1
+    canopyMatsRef.current.forEach(mat => {
+      mat.color.lerp(afterScan ? C.CANOPY_AFTER : C.CANOPY, delta * 1.0)
+      mat.emissiveIntensity = lerp(mat.emissiveIntensity, afterScan ? 0.06 : 0, delta * 1.2)
+    })
+  })
+
   const treePositions: [number, number, number, number][] = [
     [6.5, -3, 3.5, 1.0],
     [7.8, 1, 2.8, 0.9],
@@ -364,12 +402,18 @@ function Trees() {
       {treePositions.map(([x, z, h, r], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh castShadow position={[0, h / 2, 0]}>
-            <cylinderGeometry args={[0.12, 0.2, h, 7]} />
+            <cylinderGeometry args={[0.12, 0.22, h, 7]} />
             <meshStandardMaterial color={C.TRUNK} roughness={1.0} />
           </mesh>
           <mesh castShadow position={[0, h + r * 0.6, 0]}>
-            <sphereGeometry args={[r, 10, 8]} />
-            <meshStandardMaterial color={C.CANOPY} roughness={0.9} />
+            <sphereGeometry args={[r, 12, 9]} />
+            <meshStandardMaterial
+              ref={el => { if (el) canopyMatsRef.current[i] = el as THREE.MeshStandardMaterial }}
+              color={C.CANOPY}
+              roughness={0.88}
+              emissive={C.CANOPY_AFTER}
+              emissiveIntensity={0}
+            />
           </mesh>
         </group>
       ))}
@@ -688,6 +732,7 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
 
   return (
     <>
+      <fog attach="fog" args={[0x06090f, 28, 70]} />
       <CameraController />
       <SceneLighting />
       <Ground />
@@ -707,10 +752,10 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
         <EffectComposer>
           {quality.enableBloom && (
             <Bloom
-              intensity={1.0}
-              luminanceThreshold={0.65}
-              luminanceSmoothing={0.3}
-              radius={0.45}
+              intensity={1.4}
+              luminanceThreshold={0.55}
+              luminanceSmoothing={0.4}
+              radius={0.6}
             />
           )}
           <Vignette offset={0.45} darkness={0.65} />
@@ -728,7 +773,7 @@ export default function YardSceneCanvas({ quality }: { quality: QualityConfig })
       gl={{
         antialias: quality.tier !== 'MOBILE_LOW' && quality.tier !== 'MINIMAL',
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.15,
+        toneMappingExposure: 1.35,
         powerPreference: 'high-performance',
         alpha: false,
         stencil: false,
