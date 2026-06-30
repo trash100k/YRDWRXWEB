@@ -287,6 +287,71 @@ button:focus-visible {
   }
 }
 
+/* ============================================================================
+   Live Ear / Portal / Reviews / Analytics / Onboarding / Marketing sections
+   -------------------------------------------------------------------------
+   Additive keyframes for the six new product-tour sections. Only those NOT
+   already covered above are defined here (spin + drawLine already exist and
+   serve the buildbadge spinner and analytics chart-draw respectively).
+   Every decorative loop below MUST be gated by useReducedMotion() in the
+   component; under reduced motion the section renders the composed static
+   layout (these animations are simply not applied).
+   ============================================================================ */
+
+/* Live Ear — kicker dot / transcript cursor / "still listening" pulse dot.
+   Mockup: animation:blink 1.6s ease-in-out infinite (and 1s step-end for cursor). */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+/* Live Ear — concentric listening-orb rings expanding outward and fading.
+   Mockup: .ring animation:pulse 3.4s ease-out infinite (staggered 0.5s). */
+@keyframes orbPulse {
+  0%  { opacity: 0.7; transform: translate(-50%, -50%) scale(0.92); }
+  70% { opacity: 0;   transform: translate(-50%, -50%) scale(1.18); }
+  100%{ opacity: 0;   transform: translate(-50%, -50%) scale(1.18); }
+}
+
+/* Live Ear — waveform equalizer bars across the orb base.
+   Mockup: .wave span animation:bar 1.1s ease-in-out infinite (per-bar delay). */
+@keyframes waveBar {
+  0%, 100% { transform: scaleY(0.34); }
+  50%      { transform: scaleY(1); }
+}
+
+/* Live Ear — freshly-captured scope chip glow swell.
+   Mockup: .chip.fresh animation:chipin 2.6s ease-out infinite. */
+@keyframes chipGlow {
+  0%, 86% { box-shadow: 0 0 18px rgba(45, 209, 106, 0.18); }
+  90%     { box-shadow: 0 0 30px rgba(45, 209, 106, 0.5); }
+  100%    { box-shadow: 0 0 18px rgba(45, 209, 106, 0.18); }
+}
+
+/* Live Ear — shimmer sweep over the line-item row being built in real time.
+   Mockup: .qrow.building::after animation:shimmer 1.8s ease-in-out infinite.
+   Apply to an absolutely-positioned overlay sized background 240% 100%. */
+@keyframes shimmerSweep {
+  0%   { background-position: 120% 0; }
+  100% { background-position: -120% 0; }
+}
+
+/* Reviews — subtle star twinkle for the rating constellation (decorative only).
+   Not present as a CSS loop in the static mockup; provided so the React port
+   can add a gentle, reduced-motion-gated sparkle without a one-off keyframe. */
+@keyframes starTwinkle {
+  0%, 100% { opacity: 1;    transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.88); }
+}
+
+/* Analytics — count-up "tick" emphasis when a KPI value lands.
+   The number itself is interpolated in JS (spring); this is the optional
+   landing flourish on the value container. */
+@keyframes countTick {
+  0%   { transform: translateY(2px); opacity: 0.6; }
+  100% { transform: translateY(0);   opacity: 1; }
+}
+
 /* BeatAnnotation mobile: bottom-center below 768px */
 @media (max-width: 767px) {
   .beat-annotation {

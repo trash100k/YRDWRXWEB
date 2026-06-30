@@ -66,6 +66,12 @@ export default function ReducedScene() {
             { label: 'COCKPIT', title: 'Your whole operation, one screen.', body: 'Revenue, jobs, crews and a live map — every number in real time.' },
             { label: 'FIELD MODE', title: "Your crew's whole day. One thumb.", body: 'Job card, Live Ear voice notes, photos and clock-out — offline-ready.' },
             { label: 'PAID', title: 'Paid before you park the truck.', body: 'Invoice #1042 — $365.00 — marked PAID. Money in the bank.' },
+            { label: 'LIVE EAR', title: 'Talk. It logs the job.', body: '"Trimmed the hedges, upsold mulch." Voice note → timesheet + $120 add-on, hands-free.' },
+            { label: 'CLIENT PORTAL', title: 'Clients self-serve, you sleep.', body: 'Johnson Property views the quote, e-signs, and pays — 24/7, no phone tag.' },
+            { label: 'REVIEWS', title: 'Five stars, on autopilot.', body: 'Job done → review request fires. 4.9★ across 312 reviews, +27 this month.' },
+            { label: 'ANALYTICS', title: 'Know your margin by Friday.', body: 'Revenue $48,210 MTD · 62% gross margin · top route nets $1,140/day.' },
+            { label: 'ONBOARDING', title: 'Import your book in minutes.', body: 'Upload a CSV — 184 customers, 56 recurring jobs mapped and ready to schedule.' },
+            { label: 'CAMPAIGNS', title: 'Fill the gaps in your week.', body: 'One tap texts 38 lapsed clients a spring cleanup offer — 9 booked by noon.' },
           ].map(step => (
             <div key={step.label} style={{
               background: 'rgba(9,9,11,0.85)',

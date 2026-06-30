@@ -13,12 +13,22 @@ import { SocialProof } from '@/components/SocialProof'
 import { Pricing } from '@/components/Pricing'
 import { CanvasErrorBoundary } from '@/components/ErrorBoundary'
 import ReducedScene from '@/components/ReducedScene'
-import Forge from '@/sections/Forge'
-import Scheduler from '@/sections/Scheduler'
-import Channels from '@/sections/Channels'
-import Cockpit from '@/sections/Cockpit'
-import Field from '@/sections/Field'
-import Invoice from '@/sections/Invoice'
+import LazySection from '@/components/LazySection'
+
+// Below-fold marketing sections — code-split so each ships its own chunk and
+// mounts only as it nears the viewport (shrinks the initial JS bundle).
+const Forge = lazy(() => import('@/sections/Forge'))
+const LiveEar = lazy(() => import('@/sections/LiveEar'))
+const Scheduler = lazy(() => import('@/sections/Scheduler'))
+const Channels = lazy(() => import('@/sections/Channels'))
+const Cockpit = lazy(() => import('@/sections/Cockpit'))
+const Field = lazy(() => import('@/sections/Field'))
+const Invoice = lazy(() => import('@/sections/Invoice'))
+const Reviews = lazy(() => import('@/sections/Reviews'))
+const Analytics = lazy(() => import('@/sections/Analytics'))
+const Portal = lazy(() => import('@/sections/Portal'))
+const Onboarding = lazy(() => import('@/sections/Onboarding'))
+const Campaigns = lazy(() => import('@/sections/Campaigns'))
 
 const YardSceneCanvas = lazy(() => import('@/scenes/YardScene'))
 
@@ -107,24 +117,69 @@ function App() {
 
       {/* Below-fold sections */}
       <div style={{ position: 'relative', zIndex: 20, background: '#09090b' }}>
-        {/* Product tour — scan → quote → route → comms → dashboard → field → get-paid */}
+        {/* Product tour — scan → listen → route → comms → dashboard → field →
+            get-paid → reviews → analytics → client portal → onboarding → campaigns.
+            Every block is code-split + viewport-lazy via <LazySection> with a
+            reserved minHeight to avoid layout shift. */}
         <div id="features" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Forge />
+          <LazySection minHeight={640}>
+            <Forge />
+          </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Scheduler />
+          <LazySection minHeight={640}>
+            <LiveEar />
+          </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Channels />
+          <LazySection minHeight={640}>
+            <Scheduler />
+          </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Cockpit />
+          <LazySection minHeight={640}>
+            <Channels />
+          </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Field />
+          <LazySection minHeight={640}>
+            <Cockpit />
+          </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Invoice />
+          <LazySection minHeight={640}>
+            <Field />
+          </LazySection>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <LazySection minHeight={640}>
+            <Invoice />
+          </LazySection>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <LazySection minHeight={640}>
+            <Reviews />
+          </LazySection>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <LazySection minHeight={640}>
+            <Analytics />
+          </LazySection>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <LazySection minHeight={640}>
+            <Portal />
+          </LazySection>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <LazySection minHeight={640}>
+            <Onboarding />
+          </LazySection>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <LazySection minHeight={640}>
+            <Campaigns />
+          </LazySection>
         </div>
 
         {/* Stats + testimonials */}

@@ -2,7 +2,18 @@
 
 _Last updated: 2026-06-30_
 
-## Status: SHIP-READY. All P0/P1/P2 items complete.
+## Status: SHIP-READY + product tour built. Cinematic 3D upgrade in flight.
+
+> ### 🤖 Autonomous sprint — operating mode (read this first)
+> This repo is being driven as a **milestone-gated** sprint. Each tick: run a parallel
+> Workflow burst (audit/plan → build → verify) → **build-gate green** → **local commit
+> only** (checkpoint, no push). **Pushing is the deploy** (Vercel production deploys from
+> branch `claude/3d-world-brand-concepts-p2ldxb` — there is no `main`), so **batch pushes
+> and ask before each one** (daily Vercel deploy budget is tight). **Definition of Done:**
+> audit comes back cinema-grade clean AND all P0/P1 cleared. Build with the R3F + Drei +
+> GLSL stack (no Spline — all geometry generated in code). Conventions: TS strict, no
+> `@ts-nocheck` in new files, inline styles, Motion + `useReducedMotion` gating, sections
+> are default-export files under `src/sections/` and lazy-loaded via `LazySection`.
 
 ---
 
@@ -54,7 +65,27 @@ _Last updated: 2026-06-30_
 ### Content Sections (below fold)
 - [x] Stats bar (2,300+ crews · $14M+ invoiced · 4.9★ · 48 states)
 - [x] Testimonials (3 landscaper quotes)
-- [x] Pricing section (Starter / Pro $79 / Enterprise)
+- [x] Pricing section (Starter / Pro $79 / Enterprise) — glow-up (neon Pro lift)
+- [x] FAQ section + How It Works (added in cinema-grade QA pass)
+
+### Product Tour — 12 cinematic feature sections (`src/sections/`)
+- [x] Forge — AI estimate studio (detection overlay, forged quote, 3D preview)
+- [x] LiveEar — on-site voice-to-quote (mic orb, live transcript → scope chips)
+- [x] Scheduler — route optimizer (crew lanes, SVG route map)
+- [x] Channels — AI-drafted unified inbox
+- [x] Cockpit — operational dashboard (KPIs, crew map, Cutty Intel)
+- [x] Field — mobile field mode (Live Ear, clock-out)
+- [x] Invoice — PAID invoice + automation flow
+- [x] Reviews — reputation engine (auto-request, AI reply drafts)
+- [x] Analytics — revenue/BI dashboard (SVG charts + forecast)
+- [x] Portal — client-facing approve/pay/before-after
+- [x] Onboarding — first-run 3-step setup
+- [x] Campaigns — AI marketing / win-back
+- [x] All tsc-clean, Motion + useReducedMotion gated, static teasers in ReducedScene
+
+### Performance
+- [x] Code-split all 12 tour sections (React.lazy + `LazySection` IntersectionObserver
+      wrapper) — main bundle 266 KB → **117 KB** (35.7 KB gzip)
 
 ### Production Readiness
 - [x] GPU tier detection (HIGH / MEDIUM / MOBILE_HIGH / MOBILE_LOW / MINIMAL)
@@ -73,11 +104,23 @@ _Last updated: 2026-06-30_
 
 ---
 
-## 🟡 Remaining (needs external action or lower priority)
+## 🎬 In flight — Cinematic 3D upgrade (R3F + Drei + GLSL, no Spline)
 
-- [ ] **SSAO on HIGH tier** — needs `NormalPass` setup with EffectComposer; adds ~2ms GPU
+Lift the dawn-yard hero to film grade. Generate ALL geometry in code (no Spline handoff).
+- [ ] **Drei adoption** — `Environment`/`Lightformer` IBL dawn, `Sparkles`, `Cloud` (volumetric fog),
+      `ContactShadows`/`AccumulativeShadows`, `MeshTransmissionMaterial` (water/dew), `AdaptiveDpr`/`PerformanceMonitor`
+- [ ] **GLSL upgrades** — volumetric raymarched god-rays, organic simplex/curl-noise displacement,
+      caustics, improved SSS + thin-film fresnel, atmospheric scattering / heat-haze
+- [ ] **Lighting + post** — IBL-driven golden hour, N8AO/SSAO, bloom/DoF/LUT grade tuning
+- [ ] **Camera** — per-beat cinematic shot list over the 6-beat scroll system
+- [ ] **New geometry** — richer house/fence, flower beds, water feature, distant treeline, birds
+- [ ] **Perf budget** — per-tier feature gating so cinematic holds 60fps on mid/low GPUs
+
+## 🟡 Remaining (lower priority / external)
+
+- [ ] **SSAO on HIGH tier** — needs `NormalPass` setup with EffectComposer; adds ~2ms GPU (folds into cinematic pass)
 - [ ] **Lighthouse perf pass** — run `npm run build && npx serve dist` then Lighthouse; target LCP < 2.5s desktop
-- [ ] **Custom domain** — yardworx.io → point DNS to Vercel, set in project settings (user action)
+- [ ] **Custom domain** — yardworx.io → point DNS at Vercel project settings (user action)
 
 ---
 
