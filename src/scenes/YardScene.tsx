@@ -732,6 +732,7 @@ export default function YardSceneCanvas({ quality }: { quality: QualityConfig })
         powerPreference: 'high-performance',
         alpha: false,
         stencil: false,
+        preserveDrawingBuffer: true,
       }}
       dpr={quality.dpr}
       shadows={quality.shadowMapSize > 0}

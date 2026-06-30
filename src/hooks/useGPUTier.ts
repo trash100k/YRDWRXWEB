@@ -106,8 +106,11 @@ export function useGPUTier(): QualityConfig {
 
     const isLowEndGPU = /mali-4|mali-3|adreno 3[0-5]|powervr sgx/i.test(renderer)
     const isHighEndGPU = /rtx|radeon rx [6-9]|m[12] chip|apple gpu/i.test(renderer)
+    const isSoftwareRenderer = /swiftshader|llvmpipe|software/i.test(renderer)
 
-    if (!isMobile && isHighEndGPU) {
+    if (isSoftwareRenderer) {
+      setConfig(CONFIGS.MOBILE_HIGH)
+    } else if (!isMobile && isHighEndGPU) {
       setConfig(CONFIGS.HIGH)
     } else if (!isMobile) {
       setConfig(CONFIGS.MEDIUM)

@@ -11,7 +11,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
           'vendor-three': ['three'],
           'vendor-r3f': ['@react-three/fiber', '@react-three/drei'],
           'vendor-post': ['@react-three/postprocessing', 'postprocessing'],
