@@ -249,6 +249,51 @@ export const PARTICLE_FRAGMENT_SHADER = /* glsl */`
   }
 `
 
+// ── Lens flare — sun starburst billboard ──────────────────────────────
+export const FLARE_VERTEX_SHADER = /* glsl */`
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+export const FLARE_FRAGMENT_SHADER = /* glsl */`
+  uniform float uOpacity;
+  uniform float uTime;
+  varying vec2  vUv;
+
+  void main() {
+    vec2  p = vUv * 2.0 - 1.0;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+
+    // Soft core
+    float core   = exp(-r * r * 9.0);
+    float corona  = exp(-r * 2.8) * 0.55;
+
+    // 6-spike starburst
+    float spike6  = pow(abs(sin(a * 3.0 + uTime * 0.08)), 14.0) * exp(-r * 3.2);
+    // 12-spike finer grating
+    float spike12 = pow(abs(sin(a * 6.0 - uTime * 0.04)), 20.0) * exp(-r * 4.8) * 0.35;
+
+    // Diffraction rings
+    float ring1 = exp(-pow((r - 0.32) * 14.0, 2.0)) * 0.22;
+    float ring2 = exp(-pow((r - 0.50) * 20.0, 2.0)) * 0.10;
+    float ring3 = exp(-pow((r - 0.68) * 26.0, 2.0)) * 0.06;
+
+    float brightness = core + corona + spike6 + spike12 + ring1 + ring2 + ring3;
+
+    // Warm sun gradient: white-yellow core → orange rim
+    vec3  innerC = vec3(1.0, 0.96, 0.80);
+    vec3  outerC = vec3(1.0, 0.55, 0.12);
+    vec3  color  = mix(outerC, innerC, core + corona * 0.5);
+
+    float alpha  = clamp(brightness * uOpacity, 0.0, 1.0);
+    gl_FragColor = vec4(color * brightness, alpha);
+  }
+`
+
 // ── Ground energy rings (post-scan expanding pulses) ──────────────────
 export const RING_VERTEX_SHADER = /* glsl */`
   varying vec2 vUv;

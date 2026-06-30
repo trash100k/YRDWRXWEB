@@ -1,7 +1,7 @@
 import { useRef, useMemo, Suspense, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Float, Html } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, ChromaticAberration, DepthOfField } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { useBeatStore } from '@/stores/beatStore'
@@ -12,6 +12,7 @@ import {
   SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER,
   PARTICLE_VERTEX_SHADER, PARTICLE_FRAGMENT_SHADER,
   RING_VERTEX_SHADER, RING_FRAGMENT_SHADER,
+  FLARE_VERTEX_SHADER, FLARE_FRAGMENT_SHADER,
 } from './shaders'
 
 // ─── colors ──────────────────────────────────────────────────────────
@@ -274,6 +275,32 @@ function Ground() {
   const beatIndex = useBeatStore(s => s.beatIndex)
   const beatT     = useBeatStore(s => s.beatT)
 
+  const normalMap = useMemo(() => {
+    const size = 128
+    const data = new Uint8Array(size * size * 4)
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const i = (y * size + x) * 4
+        const fx = x / size
+        const fy = y / size
+        // Multi-frequency value noise for micro-surface normals
+        const n1 = Math.sin(fx * 47.3 + 3.1) * Math.cos(fy * 53.7 + 1.7)
+        const n2 = Math.sin(fx * 113.9 + 8.4) * Math.cos(fy * 97.1 + 4.2) * 0.5
+        const n3 = Math.sin(fx * 211.3 + 2.9) * Math.cos(fy * 193.7 + 6.8) * 0.25
+        const n  = (n1 + n2 + n3) / 1.75
+        data[i + 0] = Math.round(n * 28 + 128)   // R → x tangent
+        data[i + 1] = Math.round(n * 28 + 128)   // G → y tangent
+        data[i + 2] = 255                          // B → z (up)
+        data[i + 3] = 255
+      }
+    }
+    const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat)
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+    tex.repeat.set(8, 6)
+    tex.needsUpdate = true
+    return tex
+  }, [])
+
   useFrame((_, delta) => {
     if (!matRef.current) return
     const afterAmount = beatIndex === 1 ? beatT : beatIndex >= 2 ? 1 : 0
@@ -287,7 +314,8 @@ function Ground() {
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[22, 18, 32, 32]} />
       <meshStandardMaterial ref={matRef} color={C.BEFORE_GRASS} roughness={0.95} metalness={0}
-        emissive={C.AFTER_GRASS} emissiveIntensity={0} />
+        emissive={C.AFTER_GRASS} emissiveIntensity={0}
+        normalMap={normalMap} normalScale={new THREE.Vector2(0.35, 0.35)} />
     </mesh>
   )
 }
@@ -636,6 +664,54 @@ function CuttyReticle() {
   )
 }
 
+// ─── LENS FLARE — sun billboard, post-scan ────────────────────────────
+const SUN_POS = new THREE.Vector3(12, 10, 8)
+
+function LensFlare() {
+  const meshRef   = useRef<THREE.Mesh>(null)
+  const matRef    = useRef<THREE.ShaderMaterial>(null)
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+
+  const material = useMemo(() => new THREE.ShaderMaterial({
+    vertexShader:   FLARE_VERTEX_SHADER,
+    fragmentShader: FLARE_FRAGMENT_SHADER,
+    uniforms: {
+      uOpacity: { value: 0 },
+      uTime:    { value: 0 },
+    },
+    transparent: true,
+    depthWrite:  false,
+    depthTest:   false,
+    blending:    THREE.AdditiveBlending,
+    side:        THREE.DoubleSide,
+  }), [])
+
+  useFrame((state, delta) => {
+    if (!meshRef.current) return
+
+    material.uniforms.uTime.value += delta
+
+    // Billboard: copy camera quaternion so plane always faces viewer
+    meshRef.current.quaternion.copy(state.camera.quaternion)
+
+    // Fade in after scan; proportional to how much camera faces the sun
+    const afterT  = beatIndex >= 2 ? Math.min(1, (beatIndex - 1 + beatT) / 1.2) : 0
+    const camDir  = new THREE.Vector3()
+    state.camera.getWorldDirection(camDir)
+    const toSun   = SUN_POS.clone().sub(state.camera.position).normalize()
+    const facing  = Math.max(0, camDir.dot(toSun))
+    const target  = afterT * facing * 0.72
+    material.uniforms.uOpacity.value = lerp(material.uniforms.uOpacity.value, target, delta * 2.2)
+  })
+
+  return (
+    <mesh ref={meshRef} material={material} position={SUN_POS} frustumCulled={false}>
+      <planeGeometry args={[7, 7]} />
+    </mesh>
+  )
+}
+
 // ─── YARD LABELS ─────────────────────────────────────────────────────
 function YardLabels() {
   const beatIndex = useBeatStore(s => s.beatIndex)
@@ -809,6 +885,7 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
       <EnergyRings />
       {quality.tier !== 'MINIMAL' && <FloatingParticles count={particleCount} />}
       <CuttyReticle />
+      <LensFlare />
       <YardLabels />
       <JobCard />
       <InvoicePanel />
@@ -816,6 +893,9 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
 
       {quality.enablePostProcessing && (
         <EffectComposer>
+          {quality.tier === 'HIGH' && (
+            <DepthOfField focusDistance={0.008} focalLength={0.022} bokehScale={2.2} />
+          )}
           {quality.enableBloom && (
             <Bloom intensity={1.6} luminanceThreshold={0.50} luminanceSmoothing={0.45} radius={0.65} />
           )}
