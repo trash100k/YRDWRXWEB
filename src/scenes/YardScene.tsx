@@ -1,7 +1,8 @@
 import { useRef, useMemo, Suspense, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Float, Html } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, ChromaticAberration } from '@react-three/postprocessing'
+import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { useBeatStore } from '@/stores/beatStore'
 import { YARD_LABELS } from '@/data/beats'
@@ -229,6 +230,41 @@ function ScanPlane() {
         <meshBasicMaterial color={0x2ad16a} transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
     </>
+  )
+}
+
+// ─── VERTICAL SCAN CURTAIN ───────────────────────────────────────────
+function ScanCurtain() {
+  const meshRef  = useRef<THREE.Mesh>(null)
+  const scanZ    = useRef(-12)
+
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+
+  useFrame((_, delta) => {
+    if (!meshRef.current) return
+    const mat = meshRef.current.material as THREE.MeshBasicMaterial
+
+    if (beatIndex === 1) {
+      const t = 1 - Math.pow(1 - beatT, 2.5)
+      scanZ.current += (lerp(-10, 10, t) - scanZ.current) * Math.min(1, delta * 4)
+      mat.opacity = Math.min(0.18, beatT * 0.6)
+    } else if (beatIndex >= 2) {
+      scanZ.current = 12
+      mat.opacity = Math.max(0, mat.opacity - delta * 4)
+    } else {
+      scanZ.current = -12
+      mat.opacity = 0
+    }
+
+    meshRef.current.position.z = scanZ.current
+  })
+
+  return (
+    <mesh ref={meshRef} position={[0, 3.5, -12]}>
+      <planeGeometry args={[26, 7]} />
+      <meshBasicMaterial color={0x2ad16a} transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
   )
 }
 
@@ -769,6 +805,7 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
       <Trees />
       <GrassMesh count={quality.grassCount} scanZ={scanZ} scanProgress={scanProgress} />
       <ScanPlane />
+      <ScanCurtain />
       <EnergyRings />
       {quality.tier !== 'MINIMAL' && <FloatingParticles count={particleCount} />}
       <CuttyReticle />
@@ -782,7 +819,13 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
           {quality.enableBloom && (
             <Bloom intensity={1.6} luminanceThreshold={0.50} luminanceSmoothing={0.45} radius={0.65} />
           )}
-          <Vignette offset={0.42} darkness={0.70} />
+          <ChromaticAberration
+            blendFunction={BlendFunction.NORMAL}
+            offset={[0.0006, 0.0006] as unknown as THREE.Vector2}
+            radialModulation={false}
+            modulationOffset={0}
+          />
+          <Vignette offset={0.42} darkness={0.72} />
         </EffectComposer>
       )}
     </>
