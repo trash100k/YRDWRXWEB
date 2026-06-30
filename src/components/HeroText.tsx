@@ -15,13 +15,18 @@ export function HeroText() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ type: 'spring', stiffness: 320, damping: 28 }}
           style={{
+            // NOTE: this is a motion.div animating `y`, so Motion controls
+            // `transform` (translateY). Do NOT use transform for X-centering
+            // here — it gets overridden and the block shifts off-screen right.
+            // Center via left/right:0 + text-align instead.
             position: 'absolute',
-            top: '30%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            top: '26%',
+            left: 0,
+            right: 0,
+            marginInline: 'auto',
+            maxWidth: '900px',
             textAlign: 'center',
             zIndex: 40,
-            width: '100%',
             padding: '0 24px',
             boxSizing: 'border-box',
           }}

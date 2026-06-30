@@ -1,26 +1,13 @@
-import * as React from 'react'
 import { useRef, useMemo, Suspense, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import {
-  Float, Html, Environment, Lightformer, ContactShadows, Instances, Instance,
-  PerformanceMonitor, AdaptiveDpr, AdaptiveEvents,
-} from '@react-three/drei'
-import {
-  EffectComposer, Bloom, Vignette, ChromaticAberration, DepthOfField, Noise,
-  N8AO, ToneMapping, HueSaturation, BrightnessContrast,
-  wrapEffect as wrapEffectImpl,
-} from '@react-three/postprocessing'
-import { BlendFunction, ToneMappingMode, Effect, EffectAttribute } from 'postprocessing'
+import { Float, Html } from '@react-three/drei'
+import { EffectComposer, Bloom, Vignette, ChromaticAberration, DepthOfField, Noise } from '@react-three/postprocessing'
+import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { useBeatStore } from '@/stores/beatStore'
 import { YARD_LABELS } from '@/data/beats'
 import { QualityConfig } from '@/hooks/useGPUTier'
 import GrassMesh from './GrassMesh'
-import FlowerBeds from './FlowerBeds'
-import House from './House'
-import Fence from './Fence'
-import WaterFeature from './WaterFeature'
-import SkyDecor from './SkyDecor'
 import {
   SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER,
   PARTICLE_VERTEX_SHADER, PARTICLE_FRAGMENT_SHADER,
@@ -31,7 +18,6 @@ import {
   DUST_VERTEX_SHADER, DUST_FRAGMENT_SHADER,
   GOD_RAY_VERTEX_SHADER, GOD_RAY_FRAGMENT_SHADER,
   AURA_VERTEX_SHADER, AURA_FRAGMENT_SHADER,
-  GLSL_NOISE_CHUNK,
 } from './shaders'
 
 // ─── colors ──────────────────────────────────────────────────────────
@@ -56,32 +42,6 @@ const C = {
 const SUN_POS = new THREE.Vector3(12, 10, 8)
 const SUN_DIR = SUN_POS.clone().normalize()
 
-// ─── SHARED UNIT GEOMETRIES for drei <Instances> ─────────────────────
-// One geometry per primitive shape, scaled per-instance, so repeated trees /
-// hedges / backdrop cones collapse to a handful of instanced draw calls. Each
-// is authored at unit scale (box 1³, sphere r=1, cone base-r=1 h=1 with its
-// base at y=0) so a per-instance scale maps cleanly to world dimensions.
-const UNIT_BOX_GEO = new THREE.BoxGeometry(1, 1, 1)
-const UNIT_SPHERE_GEO = new THREE.SphereGeometry(1, 10, 8)
-const UNIT_CANOPY_GEO = new THREE.SphereGeometry(1, 11, 9)
-const UNIT_TRUNK_GEO = (() => {
-  // Trunk: a tapered cylinder, unit height, base anchored at y=0 so a
-  // per-instance scale.y sets trunk height and grows from the ground.
-  const g = new THREE.CylinderGeometry(0.10, 0.24, 1, 7)
-  g.translate(0, 0.5, 0)
-  return g
-})()
-const UNIT_CONE_GEO = (() => {
-  // Cone: base radius 1, unit height, base at y=0.
-  const g = new THREE.ConeGeometry(1, 1, 7)
-  g.translate(0, 0.5, 0)
-  return g
-})()
-
-// Hoisted rotation axes for per-instance sway tilt (zero per-frame allocations).
-const AXIS_X = new THREE.Vector3(1, 0, 0)
-const AXIS_Z = new THREE.Vector3(0, 0, 1)
-
 function lerp(a: number, b: number, t: number) { return a + (b - a) * Math.min(1, Math.max(0, t)) }
 function clamp01(x: number) { return Math.min(1, Math.max(0, x)) }
 function smoothstep(t: number) { const x = clamp01(t); return x * x * (3 - 2 * x) }
@@ -101,10 +61,7 @@ const SKY_HOR_NIGHT  = new THREE.Color(0x0a1428)
 const SKY_HOR_DAWN   = new THREE.Color(0x160a04)
 
 const KEY_COOL       = new THREE.Color(0xb0c8e0)
-// Warm-key/cool-fill split: at full dawn the key reads as cool SKY FILL from
-// the shadow side while the warm sun owns the key. Keeping the key cool
-// (0xc9d4e8) restores dimensionality the old warm-on-warm pairing flattened.
-const KEY_WARM       = new THREE.Color(0xc9d4e8)
+const KEY_WARM       = new THREE.Color(0xffd080)
 const HEMI_SKY_NIGHT = new THREE.Color(0x080f20)
 const HEMI_SKY_DAY   = new THREE.Color(0x5a8ab0)
 const HEMI_GND_NIGHT = new THREE.Color(0x0c0f08)
@@ -118,31 +75,15 @@ const FOG_WARM       = new THREE.Color(0x140a06)
 // ─── CAMERA RIG — one authored pose per beat ─────────────────────────
 interface CameraRig { pos: [number, number, number]; look: [number, number, number] }
 const CAMERA_RIGS: CameraRig[] = [
-  { pos: [9,  6.5, 11],  look: [0,   1.4, -1] }, // beat0 — wider/higher, look biased to house so the push-in has somewhere to go
-  { pos: [6,  5,   7.5], look: [0,   1.2, 1.5] },// beat1 — locked push-in; wavefront approaches along the lower third
-  { pos: [4.5,5,   5.5], look: [1.5, 3.2, 1] }, // beat2 — tighter rack onto the JobCard
-  { pos: [3,  8.5, 9.5], look: [0,   0.8, 3] }, // beat3 — higher/wider-back crane over Oak St, look on the ribbon plane
-  { pos: [5,  3.2, 5.8], look: [3.2, 1.8, 2] }, // beat4 — fractionally lower, look biased onto the invoice/pulse
-  { pos: [12, 10.5,15.5],look: [2,   1.6, 1] }, // beat5 — wide+high golden hero, look biased +x so the flare fires
+  { pos: [8,  6,  10],  look: [0,   1.5, 0] }, // beat0 — wide establishing
+  { pos: [6,  5,  7.5], look: [0,   1,   2] }, // beat1 — low push-in toward the scan
+  { pos: [5,  5,  6],   look: [1.5, 3,   1] }, // beat2 — angled on the JobCard
+  { pos: [4,  8,  9],   look: [0,   1,   3] }, // beat3 — high + pulled back over Oak St
+  { pos: [5,  3.5, 6],  look: [3.5, 2,   2] }, // beat4 — low near the driveway
+  { pos: [12, 10, 15],  look: [0,   1.5, 0] }, // beat5 — wide + high golden hero
 ]
 // Per-beat target FOV: compression on beat4, openness on the beat5 reveal.
 const CAMERA_FOV = [40, 40, 40, 40, 38, 44]
-
-// Per-beat handheld breathing amplitude (x/y/z). Beat 1 is hard-cut to 0.05 in
-// CameraController so the scan push-in reads clean — that cut is NOT keyed here.
-const CAMERA_BREATHE: [number, number, number][] = [
-  [0.30, 0.15, 0.30], // beat0 — documentary dawn handheld
-  [0.30, 0.15, 0.30], // beat1 — overridden by the 0.05 hard-cut below
-  [0.22, 0.12, 0.22], // beat2 — calmer on the tight rack
-  [0.30, 0.15, 0.30], // beat3 — open crane
-  [0.30, 0.15, 0.30], // beat4 — intimate low push
-  [0.30, 0.15, 0.30], // beat5 — life in the held hero frame
-]
-
-// Max camera displacement per frame on the two flagged comfort transitions
-// (2→3 crane, 3→4 descent-reversal). A violent scroll-fling makes the eased
-// TARGET leap; clamping the follower's per-frame move prevents a whip-pan.
-const MAX_DISPLACEMENT = 0.6
 
 // ─── SKY DOME ────────────────────────────────────────────────────────
 function SkyDome() {
@@ -196,10 +137,6 @@ function CameraController() {
   const tmpPos     = useRef(new THREE.Vector3())
   const tmpLook    = useRef(new THREE.Vector3())
   const tmpBreathe = useRef(new THREE.Vector3())
-  // Displacement-clamp temporaries (zero per-frame allocations).
-  const prevPos    = useRef(new THREE.Vector3())
-  const tmpDelta   = useRef(new THREE.Vector3())
-  const hasPrev    = useRef(false)
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime()
@@ -221,12 +158,12 @@ function CameraController() {
       lerp(from.pos[2], to.pos[2], blend),
     )
 
-    // Per-beat handheld breathing amplitude (distinct character per shot).
-    const amp = CAMERA_BREATHE[beat]
+    // Breathing offset — bounded; cut hard on beat1 so the push-in reads clean.
+    const breatheScale = beatIndex === 1 ? 0.0 : 1.0
     tmpBreathe.current.set(
-      Math.sin(t * 0.12) * amp[0],
-      Math.sin(t * 0.2)  * amp[1],
-      Math.sin(t * 0.12) * amp[2],
+      Math.sin(t * 0.12) * 0.3 * breatheScale,
+      Math.sin(t * 0.2)  * 0.15 * breatheScale,
+      Math.sin(t * 0.12) * 0.3 * breatheScale,
     )
     // beat1: lock azimuth (no orbital rotation) and keep any wobble ≤ 0.05 units.
     if (beatIndex === 1) {
@@ -244,24 +181,6 @@ function CameraController() {
     // Converge position + lookAt at the SAME rate so the rig settles and holds.
     const rate = 1 - Math.exp(-delta * 3)
     camera.position.lerp(tmpPos.current, rate)
-
-    // Per-frame displacement clamp on the two flagged comfort transitions
-    // (2→3 crane, 3→4 descent). The follower already limits speed, but a fast
-    // scroll-fling can leap the target; cap the actual move so a violent scroll
-    // can't whip-pan. Applied only on those transitions to leave every other
-    // shot's eased motion untouched.
-    const flaggedTransition = beatIndex === 2 || beatIndex === 3
-    if (flaggedTransition && hasPrev.current) {
-      tmpDelta.current.copy(camera.position).sub(prevPos.current)
-      const moved = tmpDelta.current.length()
-      if (moved > MAX_DISPLACEMENT) {
-        tmpDelta.current.multiplyScalar(MAX_DISPLACEMENT / moved)
-        camera.position.copy(prevPos.current).add(tmpDelta.current)
-      }
-    }
-    prevPos.current.copy(camera.position)
-    hasPrev.current = true
-
     lookRef.current.lerp(tmpLook.current, rate)
     camera.lookAt(lookRef.current)
 
@@ -275,74 +194,6 @@ function CameraController() {
   })
 
   return null
-}
-
-// ─── DAWN ENVIRONMENT — drei IBL fill (HIGH/MEDIUM only) ──────────────
-// Image-based ambient built from <Lightformer>s so the house windows,
-// concrete and metal frames actually REFLECT a dawn sky instead of reading
-// matte. Resolution scales by tier.
-//
-// frames={1} bakes the cube ONCE per mount — never frames={Infinity} on a
-// frameloop="always" scene (that re-renders the env cube every frame and tanks
-// perf). To make the ground-bounce beat-reactive WITHOUT a per-frame re-bake we
-// QUANTISE dawnT into a few steps (DAWN_STEPS) and re-key the <Environment> on a
-// step change: a fresh mount re-bakes the cube exactly DAWN_STEPS times across
-// the whole scroll (cheap), so the ground-bounce greens with dawnT in lockstep
-// with the analytic forest fill — same store, no second source of truth. The
-// analytic key/sun/rim still carry the full lighting arc; the env is reflection
-// fill, never gated on the beat/scan/camera contract.
-const DAWN_STEPS = 6
-const GROUND_BOUNCE_COOL = new THREE.Color(0x1c3a12)
-const GROUND_BOUNCE_WARM = new THREE.Color(0x2e6a1e)
-const groundBounceCache: string[] = []
-function groundBounceForStep(step: number): string {
-  let c = groundBounceCache[step]
-  if (!c) {
-    c = '#' + new THREE.Color()
-      .lerpColors(GROUND_BOUNCE_COOL, GROUND_BOUNCE_WARM, step / DAWN_STEPS)
-      .getHexString()
-    groundBounceCache[step] = c
-  }
-  return c
-}
-
-function DawnEnvironment({ quality }: { quality: QualityConfig }) {
-  const resolution = quality.tier === 'HIGH' ? 256 : 128
-  const beatIndex  = useBeatStore(s => s.beatIndex)
-  const beatT      = useBeatStore(s => s.beatT)
-
-  // Quantised dawn step → re-key (and thus a fresh bake) only when the step
-  // actually changes. No per-frame state churn, no per-frame allocation.
-  const [step, setStep] = useState(0)
-  const stepRef = useRef(0)
-  useFrame(() => {
-    const next = Math.round(dawnT(beatIndex, beatT) * DAWN_STEPS)
-    if (next !== stepRef.current) {
-      stepRef.current = next
-      setStep(next)
-    }
-  })
-
-  const bounceColor   = groundBounceForStep(step)
-  const bounceBoost   = lerp(0.35, 0.9, step / DAWN_STEPS)
-
-  return (
-    // key forces a fresh single-frame bake whenever the dawn step changes.
-    <Environment key={step} resolution={resolution} frames={1} background={false}>
-      {/* Cool pre-dawn sky-dome fill */}
-      <Lightformer intensity={0.5} form="ring" color="#2a3a5a"
-        scale={[40, 40, 1]} position={[0, 20, -20]} target={[0, 0, 0]} />
-      {/* Warm horizon band where the sun rises (matches SUN_POS azimuth, +x/+z) */}
-      <Lightformer intensity={1.2} form="rect" color="#ff9a4a"
-        scale={[18, 5, 1]} position={[14, 4, 10]} rotation-y={-Math.PI / 4} />
-      {/* Beat-reactive ground bounce — greens/brightens with the quantised dawn */}
-      <Lightformer intensity={bounceBoost} form="rect" color={bounceColor}
-        scale={[30, 30, 1]} rotation-x={Math.PI / 2} position={[0, -2, 0]} />
-      {/* Sky fill from camera-left to balance the key */}
-      <Lightformer intensity={0.4} form="rect" color="#6a86b0"
-        scale={[20, 12, 1]} position={[-16, 8, -4]} rotation-y={Math.PI / 3} />
-    </Environment>
-  )
 }
 
 // ─── LIGHTING ────────────────────────────────────────────────────────
@@ -360,14 +211,6 @@ function SceneLighting({ quality }: { quality: QualityConfig }) {
 
   // Shadow map sized to the quality tier (0 → shadows disabled at the Canvas level).
   const shadowSize = quality.shadowMapSize > 0 ? quality.shadowMapSize : 1024
-  // IBL fill (Environment) is ADDITIVE reflection/spec polish on HIGH/MEDIUM —
-  // never the primary fill. The analytic ambient/hemi/key/sun rig below carries
-  // the FULL lighting arc identically on every tier, so deleting the
-  // <DawnEnvironment> would leave the scene just as readable. (Previously this
-  // gate slashed ambient 0.55→0.12 and halved the hemi on HIGH/MED, leaning on
-  // the env as the dominant fill — which rendered mobile near-black and couldn't
-  // be verified headless. Both lifts are now tier-independent again.)
-  const hasIBL = quality.tier === 'HIGH' || quality.tier === 'MEDIUM'
 
   useFrame((_, delta) => {
     if (!keyRef.current || !fillRef.current || !ambientRef.current || !hemiRef.current ||
@@ -396,39 +239,24 @@ function SceneLighting({ quality }: { quality: QualityConfig }) {
     keyRef.current.intensity = lerp(keyRef.current.intensity, lerp(1.6, 0.5, afterT), delta * 1.5)
     keyRef.current.color.lerpColors(KEY_COOL, KEY_WARM, afterT)
 
-    // Hemisphere: night → warm afternoon — the strong IBL-independent sky/ground
-    // fill, identical on every tier (env is additive polish, not the fill).
+    // Hemisphere: night → dim afternoon, on the same continuous ramp.
     hemiRef.current.color.lerpColors(HEMI_SKY_NIGHT, HEMI_SKY_DAY, afterT)
     hemiRef.current.groundColor.lerpColors(HEMI_GND_NIGHT, HEMI_GND_DAY, afterT)
-    const hemiTarget = lerp(0.45, 1.3, afterT)
-    hemiRef.current.intensity = lerp(hemiRef.current.intensity, hemiTarget, delta * 1.5)
+    hemiRef.current.intensity = lerp(hemiRef.current.intensity, lerp(0.35, 1.3, afterT), delta * 1.5)
 
     // Warm sun: dominant shadow caster as it ramps in; pushes to a golden hero on beat5.
     const sunTarget = lerp(0, 1.8, afterT) + heroBoost * 0.6 // → ~2.4 at full beat5
     sunRef.current.intensity = lerp(sunRef.current.intensity, sunTarget, delta * 1.8)
 
-    // Rim: cool edge → warm edge across the arc; flare the hero silhouette on beat5.
-    rimRef.current.intensity = lerp(0.65, 1.4, afterT) + heroBoost * 0.5
+    // Rim: cool edge → warm edge across the arc.
+    rimRef.current.intensity = lerp(0.65, 1.4, afterT)
     rimRef.current.color.lerpColors(RIM_COOL, RIM_WARM, afterT)
-
-    // ── Single shadow caster per frame (S1) ──────────────────────────────
-    // Both directional casters share an IDENTICAL frustum and the intensities
-    // already cross-fade, so handing the shadow baton at the afterT=0.5 mid-
-    // point is invisible — but it halves the shadow-map render to exactly one
-    // depth pass. Gated by activeShadowCasters (0 ⇒ neither casts on mobile-low).
-    const allowShadows = quality.activeShadowCasters > 0
-    keyRef.current.castShadow = allowShadows && afterT < 0.5
-    sunRef.current.castShadow = allowShadows && afterT >= 0.5
   })
 
   return (
     <>
-      {/* Additive reflection/spec polish on HIGH/MED only — NOT the fill. */}
-      {hasIBL && <DawnEnvironment quality={quality} />}
-      {/* Robust IBL-independent ambient floor — identical on every tier so the
-          dawn yard reads cleanly even with <DawnEnvironment> removed entirely. */}
-      <ambientLight ref={ambientRef} color={0x18202e} intensity={0.48} />
-      <hemisphereLight ref={hemiRef} args={[0x080f20, 0x0c0f08, 0.45]} position={[0, 20, 0]} />
+      <ambientLight ref={ambientRef} color={0x18202e} intensity={0.55} />
+      <hemisphereLight ref={hemiRef} args={[0x080f20, 0x0c0f08, 0.35]} position={[0, 20, 0]} />
       {/* Pre-dawn key caster — cross-fades out as the sun rises (identical frustum, no double shadows). */}
       <directionalLight
         ref={keyRef}
@@ -695,122 +523,152 @@ const HEDGE_CLUSTERS: { pos: [number, number, number] }[] = [
   { pos: [6,    0, -2.5] },
 ]
 
-// Per-cluster geometry: one base box + N canopy spheres. Dimensions are folded
-// into per-instance scale (unit box / unit sphere shared across all clusters →
-// two instanced draw calls total instead of ~25 meshes). Sphere radius is the
-// uniform per-instance scale; box uses non-uniform per-axis scale.
-interface HedgeBox  { cluster: number; pos: [number, number, number]; box: [number, number, number] }
-interface HedgeBall { cluster: number; pos: [number, number, number]; r: number }
-
-const HEDGE_BOXES: HedgeBox[] = [
-  { cluster: 0, pos: [-4,   0.9,  -5],   box: [7,   1.8, 1.2] },
-  { cluster: 1, pos: [-7.5, 1.1,  -1],   box: [1.0, 2.2, 6] },
-  { cluster: 2, pos: [2,    0.7,  -5.5], box: [4,   1.4, 0.9] },
-  { cluster: 3, pos: [0,    0.35, -5.3], box: [9.4, 0.7, 0.7] },
-  { cluster: 4, pos: [6,    0.8,  -2.5], box: [1.6, 1.6, 3.2] },
-]
-
-const HEDGE_BALLS: HedgeBall[] = [
-  { cluster: 0, pos: [-1.8,  0.7, -4.8],  r: 0.7 },
-  { cluster: 0, pos: [-5.5,  0.6, -5.2],  r: 0.55 },
-  { cluster: 0, pos: [-4,    0.8, -4.7],  r: 0.45 },
-  { cluster: 1, pos: [-7.2,  0.9, -2.8],  r: 0.6 },
-  { cluster: 1, pos: [-7.7,  0.7,  0.2],  r: 0.5 },
-  { cluster: 2, pos: [3.5,   0.5, -5.4],  r: 0.5 },
-  // Foundation strip shrubs (cluster 3) — alternating radii.
-  { cluster: 3, pos: [-4,    0.35,-5.2],  r: 0.4 },
-  { cluster: 3, pos: [-2.4,  0.35,-5.2],  r: 0.52 },
-  { cluster: 3, pos: [-0.8,  0.35,-5.2],  r: 0.4 },
-  { cluster: 3, pos: [2.6,   0.35,-5.2],  r: 0.52 },
-  { cluster: 3, pos: [4.2,   0.35,-5.2],  r: 0.4 },
-  { cluster: 4, pos: [6.2,   0.7, -3.5],  r: 0.62 },
-  { cluster: 4, pos: [5.8,   0.6, -1.5],  r: 0.55 },
-  { cluster: 4, pos: [6.3,   0.8, -2.3],  r: 0.48 },
-]
-
 function Hedges() {
-  const boxMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: C.HEDGE, roughness: 0.88, emissive: C.HEDGE_AFTER, emissiveIntensity: 0,
-  }), [])
-  const ballMat = useMemo(() => new THREE.MeshStandardMaterial({
-    color: C.HEDGE, roughness: 0.88, emissive: C.HEDGE_AFTER, emissiveIntensity: 0,
-  }), [])
-
-  const boxRefs  = useRef<(THREE.Object3D | null)[]>([])
-  const ballRefs = useRef<(THREE.Object3D | null)[]>([])
-  const beatIndex = useBeatStore(s => s.beatIndex)
-  const scanZ     = useBeatStore(s => s.scanZ)
+  const matsRef    = useRef<THREE.MeshStandardMaterial[]>([])
+  const clusterRefs = useRef<(THREE.Group | null)[]>([])
+  const beatIndex  = useBeatStore(s => s.beatIndex)
+  const scanZ      = useBeatStore(s => s.scanZ)
 
   // One growth value per cluster (0.15 = sprout, 1.0 = full) — each emerges as
-  // the shared scan wavefront passes its Z, exactly like before; the wavefront
-  // coupling is UNCHANGED, only retargeted onto Instance refs.
-  const growthRef = useRef<number[]>(HEDGE_CLUSTERS.map(() => 0.15))
+  // the shared scan wavefront passes its Z, exactly like the trees, instead of
+  // the whole hedge group popping up at once.
+  const growthRef  = useRef<number[]>([])
 
   useFrame((_, delta) => {
     const afterScan = beatIndex >= 1
-    boxMat.color.lerp(afterScan ? C.HEDGE_AFTER : C.HEDGE, delta * 1.2)
-    boxMat.emissiveIntensity = lerp(boxMat.emissiveIntensity, afterScan ? 0.09 : 0, delta * 1.5)
-    ballMat.color.copy(boxMat.color)
-    ballMat.emissiveIntensity = boxMat.emissiveIntensity
+    matsRef.current.forEach(mat => {
+      mat.color.lerp(afterScan ? C.HEDGE_AFTER : C.HEDGE, delta * 1.2)
+      mat.emissiveIntensity = lerp(mat.emissiveIntensity, afterScan ? 0.09 : 0, delta * 1.5)
+    })
 
-    // Advance per-cluster growth (same fast-up / slow-down cadence as before).
-    for (let i = 0; i < HEDGE_CLUSTERS.length; i++) {
+    clusterRefs.current.forEach((grp, i) => {
+      if (!grp) return
       const clusterZ = HEDGE_CLUSTERS[i].pos[2]
+      // Fast-up / slow-down lerp, identical cadence to the trees' emergence.
       const passed = afterScan && scanZ > clusterZ - 1.5
       const target = passed ? 1.0 : 0.15
       const speed  = passed ? 5.5 : 2.0
-      growthRef.current[i] = lerp(growthRef.current[i], target, delta * speed)
-    }
-
-    // Retarget growth onto each instance: scale.y AND position.y scale about the
-    // cluster ground origin (y=0) so clusters rise from the lawn exactly as the
-    // old grp.scale.y did — boxes use non-uniform scale, balls uniform.
-    HEDGE_BOXES.forEach((b, i) => {
-      const inst = boxRefs.current[i]
-      if (!inst) return
-      const g = growthRef.current[b.cluster]
-      inst.scale.set(b.box[0], b.box[1] * g, b.box[2])
-      inst.position.set(b.pos[0], b.pos[1] * g, b.pos[2])
-    })
-    HEDGE_BALLS.forEach((b, i) => {
-      const inst = ballRefs.current[i]
-      if (!inst) return
-      const g = growthRef.current[b.cluster]
-      inst.scale.set(b.r, b.r * g, b.r)
-      inst.position.set(b.pos[0], b.pos[1] * g, b.pos[2])
+      const g = growthRef.current[i] ?? 0.15
+      growthRef.current[i] = lerp(g, target, delta * speed)
+      // scale.y about each sub-group's own origin (ground level) so clusters
+      // rise from the lawn rather than scaling around the scene root.
+      grp.scale.y = growthRef.current[i]
     })
   })
 
+  const hedgeMat = useMemo(() => {
+    const m = new THREE.MeshStandardMaterial({ color: C.HEDGE, roughness: 0.88, emissive: C.HEDGE_AFTER, emissiveIntensity: 0 })
+    matsRef.current.push(m)
+    return m
+  }, [])
+
   return (
     <group>
-      {/* Cluster boxes — one instanced draw (unit box scaled per instance). */}
-      <Instances geometry={UNIT_BOX_GEO} material={boxMat} limit={HEDGE_BOXES.length}
-        castShadow receiveShadow frustumCulled={false}>
-        {HEDGE_BOXES.map((b, i) => (
-          <Instance key={i} ref={el => { boxRefs.current[i] = el as THREE.Object3D | null }}
-            position={b.pos} scale={b.box} />
+      <group ref={el => { clusterRefs.current[0] = el }} position={[-4, 0, -5]} scale={[1, 0.15, 1]}>
+        <mesh castShadow receiveShadow material={hedgeMat}><boxGeometry args={[7, 1.8, 1.2]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[2.2, 0.7, 0.2]}><sphereGeometry args={[0.7, 8, 6]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[-1.5, 0.6, -0.2]}><sphereGeometry args={[0.55, 7, 5]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[0, 0.8, 0.3]}><sphereGeometry args={[0.45, 6, 5]} /></mesh>
+      </group>
+      <group ref={el => { clusterRefs.current[1] = el }} position={[-7.5, 0, -1]} scale={[1, 0.15, 1]}>
+        <mesh castShadow receiveShadow material={hedgeMat}><boxGeometry args={[1.0, 2.2, 6]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[0.3, 0.9, -1.8]}><sphereGeometry args={[0.6, 7, 5]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[-0.2, 0.7, 1.2]}><sphereGeometry args={[0.5, 6, 5]} /></mesh>
+      </group>
+      <group ref={el => { clusterRefs.current[2] = el }} position={[2, 0, -5.5]} scale={[1, 0.15, 1]}>
+        <mesh castShadow receiveShadow material={hedgeMat}><boxGeometry args={[4, 1.4, 0.9]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[1.5, 0.5, 0.1]}><sphereGeometry args={[0.5, 7, 5]} /></mesh>
+      </group>
+
+      {/* Foundation low-shrub strip across the house front (z ≈ -5.3, x = -5..5) */}
+      <group ref={el => { clusterRefs.current[3] = el }} position={[0, 0, -5.3]} scale={[1, 0.15, 1]}>
+        <mesh castShadow receiveShadow material={hedgeMat}><boxGeometry args={[9.4, 0.7, 0.7]} /></mesh>
+        {[-4, -2.4, -0.8, 2.6, 4.2].map((bx, i) => (
+          <mesh key={i} castShadow material={hedgeMat} position={[bx, 0.35, 0.1]}>
+            <sphereGeometry args={[0.4 + (i % 2) * 0.12, 7, 5]} />
+          </mesh>
         ))}
-      </Instances>
-      {/* Canopy spheres — one instanced draw (unit sphere scaled per instance). */}
-      <Instances geometry={UNIT_SPHERE_GEO} material={ballMat} limit={HEDGE_BALLS.length}
-        castShadow frustumCulled={false}>
-        {HEDGE_BALLS.map((b, i) => (
-          <Instance key={i} ref={el => { ballRefs.current[i] = el as THREE.Object3D | null }}
-            position={b.pos} scale={b.r} />
-        ))}
-      </Instances>
+      </group>
+
+      {/* Right-side shrub / hedge cluster — fills the bare right flank (x ≈ +5..7) */}
+      <group ref={el => { clusterRefs.current[4] = el }} position={[6, 0, -2.5]} scale={[1, 0.15, 1]}>
+        <mesh castShadow receiveShadow material={hedgeMat}><boxGeometry args={[1.6, 1.6, 3.2]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[0.2, 0.7, -1.0]}><sphereGeometry args={[0.62, 7, 5]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[-0.2, 0.6, 1.0]}><sphereGeometry args={[0.55, 7, 5]} /></mesh>
+        <mesh castShadow material={hedgeMat} position={[0.3, 0.8, 0.2]}><sphereGeometry args={[0.48, 6, 5]} /></mesh>
+      </group>
     </group>
   )
 }
 
-// ─── HARDSCAPE — driveway, mulch beds, walkway (house lives in House.tsx) ─
-// The detailed parametric house (body/roof/trim/gutters/shutters/posts/windows
-// /mullions/garage panels) now lives in <House/> at the same world transform.
-// Structures keeps only the ground-level hardscape it always anchored to (the
-// driveway carve-out, mulch strips and walkway the grass reject-samples around).
+// ─── HOUSE + DRIVEWAY + MULCH ────────────────────────────────────────
 function Structures() {
   return (
     <>
+      {/* House body */}
+      <mesh position={[0, 2.5, -7.5]} castShadow receiveShadow>
+        <boxGeometry args={[11, 5, 4]} />
+        <meshStandardMaterial color={C.HOUSE} roughness={0.80} metalness={0.06} />
+      </mesh>
+
+      {/* Roof */}
+      <mesh position={[0, 6.5, -7.5]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <cylinderGeometry args={[0, 7.8, 3, 4]} />
+        <meshStandardMaterial color={C.ROOF} roughness={0.92} />
+      </mesh>
+
+      {/* Eave / gable trim — thin box tucked under the roofline */}
+      <mesh position={[0, 5.1, -7.5]} castShadow>
+        <boxGeometry args={[11.4, 0.35, 4.4]} />
+        <meshStandardMaterial color={C.ROOF} roughness={0.9} />
+      </mesh>
+
+      {/* Chimney */}
+      <mesh position={[3.2, 7.4, -8.2]} castShadow>
+        <boxGeometry args={[1.0, 2.6, 1.0]} />
+        <meshStandardMaterial color={C.ROOF} roughness={0.95} />
+      </mesh>
+
+      {/* Front door + small porch overhang, camera-visible face (z ≈ -5.5) */}
+      <mesh position={[1.0, 1.4, -5.45]}>
+        <planeGeometry args={[1.3, 2.8]} />
+        <meshStandardMaterial color={0x241a12} roughness={0.7} metalness={0.05} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[1.0, 2.95, -5.0]} castShadow>
+        <boxGeometry args={[2.0, 0.18, 1.0]} />
+        <meshStandardMaterial color={C.ROOF} roughness={0.9} />
+      </mesh>
+
+      {/* Windows on the camera-visible right face (x ≈ +5.5) */}
+      <mesh position={[5.5, 3.4, -7.5]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[1.4, 1.1, 0.05]} />
+        <meshStandardMaterial color={0x2a3a50} roughness={0.15} metalness={0.4}
+          emissive={C.WINDOW_WARM} emissiveIntensity={0.45} />
+      </mesh>
+      <mesh position={[5.5, 3.4, -8.8]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[1.2, 1.0, 0.05]} />
+        <meshStandardMaterial color={0x2a3a50} roughness={0.15} metalness={0.4}
+          emissive={C.WINDOW_WARM} emissiveIntensity={0.30} />
+      </mesh>
+
+      {/* Garage door */}
+      <mesh position={[-3.0, 1.25, -5.6]}>
+        <boxGeometry args={[3.5, 2.5, 0.1]} />
+        <meshStandardMaterial color={0x3a4260} roughness={0.65} metalness={0.1} />
+      </mesh>
+
+      {/* Window — with interior warm glow */}
+      <mesh position={[2.5, 3.5, -5.6]}>
+        <boxGeometry args={[1.8, 1.2, 0.05]} />
+        <meshStandardMaterial color={0x2a3a50} roughness={0.15} metalness={0.4}
+          emissive={C.WINDOW_WARM} emissiveIntensity={0.55} />
+      </mesh>
+      <mesh position={[-0.8, 3.5, -5.6]}>
+        <boxGeometry args={[1.4, 1.0, 0.05]} />
+        <meshStandardMaterial color={0x2a3a50} roughness={0.15} metalness={0.4}
+          emissive={C.WINDOW_WARM} emissiveIntensity={0.40} />
+      </mesh>
+
       {/* Driveway */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2.8, 0.005, 1]} receiveShadow>
         <planeGeometry args={[4.2, 9]} />
@@ -880,113 +738,81 @@ function BarePatches() {
 }
 
 // ─── TREES — multi-layer canopy, animated sway + scan-driven emergence ─
-// [x, z, trunkH, r1, r2, r3] — three stacked canopy spheres per tree.
-const TREES = [
-  { x: 6.5,  z: -3,  h: 4.4, r1: 1.25, r2: 0.95, r3: 0.60 },
-  { x: 7.8,  z: 1,   h: 3.6, r1: 1.05, r2: 0.80, r3: 0.50 },
-  { x: -7.2, z: 3,   h: 5.0, r1: 1.35, r2: 1.05, r3: 0.65 },
-  { x: -5.5, z: -2,  h: 3.2, r1: 0.85, r2: 0.65, r3: 0.40 },
-  { x: 5.0,  z: 4.5, h: 2.9, r1: 0.78, r2: 0.58, r3: 0.35 },
-  { x: -2.0, z: 6,   h: 2.5, r1: 0.65, r2: 0.48, r3: 0.30 },
-] as const
-
-// Canopy instances flattened across all trees, each carrying its tree index,
-// base-relative LOCAL offset (so sway can tilt about the trunk base) and radius.
-interface CanopyInstance { tree: number; off: [number, number, number]; r: number }
-const TREE_CANOPIES: CanopyInstance[] = TREES.flatMap((tr, i) => [
-  { tree: i, off: [0,            tr.h + tr.r1 * 0.45,                             0],            r: tr.r1 },
-  { tree: i, off: [tr.r2 * 0.2,  tr.h + tr.r1 * 0.9 + tr.r2 * 0.5,                tr.r2 * -0.1], r: tr.r2 },
-  { tree: i, off: [0,            tr.h + tr.r1 * 0.9 + tr.r2 * 1.0 + tr.r3 * 0.4,  0],            r: tr.r3 },
-])
-
 function Trees() {
+  const groupRef  = useRef<THREE.Group>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
   const scanZ     = useBeatStore(s => s.scanZ)
 
-  // Per-tree growth tracking (0 = tiny, 1 = full size) — UNCHANGED math,
-  // retargeted from group transforms onto per-instance refs.
-  const growthRef = useRef(new Array(TREES.length).fill(0.05))
+  // Per-tree growth tracking (0 = tiny, 1 = full size)
+  const growthRef = useRef(new Array(6).fill(0.05))
 
   const canopyMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: C.CANOPY, roughness: 0.86, emissive: C.CANOPY_AFTER, emissiveIntensity: 0,
   }), [])
+
   const trunkMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: C.TRUNK, roughness: 1.0,
   }), [])
 
-  const trunkRefs  = useRef<(THREE.Object3D | null)[]>([])
-  const canopyRefs = useRef<(THREE.Object3D | null)[]>([])
-
-  // Hoisted per-frame temporaries (zero allocations in useFrame).
-  const tmpOff = useRef(new THREE.Vector3())
-
   useFrame((state, delta) => {
-    const t = state.clock.getElapsedTime()
+    const t      = state.clock.getElapsedTime()
     const afterScan = beatIndex >= 1
 
     canopyMat.color.lerp(afterScan ? C.CANOPY_AFTER : C.CANOPY, delta * 1.0)
     canopyMat.emissiveIntensity = lerp(canopyMat.emissiveIntensity, afterScan ? 0.10 : 0, delta * 1.2)
 
-    // Advance per-tree growth + sway angles (same cadence as before).
-    for (let i = 0; i < TREES.length; i++) {
-      const tz     = TREES[i].z
-      const passed = beatIndex >= 1 && scanZ > tz - 1.5
-      const target = passed ? 1.0 : 0.05
-      const speed  = passed ? 5.5 : 2.0
-      growthRef.current[i] = lerp(growthRef.current[i], target, delta * speed)
+    if (groupRef.current) {
+      groupRef.current.children.forEach((child, i) => {
+        // Cinematic sway
+        child.rotation.z = Math.sin(t * 0.7 + i * 1.5) * 0.018
+        child.rotation.x = Math.sin(t * 0.5 + i * 1.1) * 0.012
+
+        // Sequential emergence: trees grow up as scan sweeps past their Z
+        const tz     = trees[i].z
+        const passed = beatIndex >= 1 && scanZ > tz - 1.5
+        const target = passed ? 1.0 : 0.05
+        const speed  = passed ? 5.5 : 2.0  // snap up fast, shrink slowly
+        growthRef.current[i] = lerp(growthRef.current[i], target, delta * speed)
+
+        const g = growthRef.current[i]
+        // Y grows from ground up; X/Z are more restrained for natural look
+        child.scale.set(lerp(0.25, 1.0, g), g, lerp(0.25, 1.0, g))
+      })
     }
-
-    // Trunks: rise from the ground (scale.y), sway tilt about the base.
-    TREES.forEach((tr, i) => {
-      const inst = trunkRefs.current[i]
-      if (!inst) return
-      const g  = growthRef.current[i]
-      const sz = Math.sin(t * 0.7 + i * 1.5) * 0.018
-      const sx = Math.sin(t * 0.5 + i * 1.1) * 0.012
-      inst.position.set(tr.x, 0, tr.z)
-      inst.scale.set(lerp(0.25, 1.0, g), tr.h * g, lerp(0.25, 1.0, g))
-      inst.rotation.set(sx, 0, sz)
-    })
-
-    // Canopies: grow + sway. The whole tree tilts about its trunk base, so each
-    // canopy's world position is base + R(sway)·(scaledLocalOffset). Replicating
-    // the old group-rotation keeps the canopy reading as one swaying mass.
-    TREE_CANOPIES.forEach((cp, i) => {
-      const inst = canopyRefs.current[i]
-      if (!inst) return
-      const tr = TREES[cp.tree]
-      const g  = growthRef.current[cp.tree]
-      const sz = Math.sin(t * 0.7 + cp.tree * 1.5) * 0.018
-      const sx = Math.sin(t * 0.5 + cp.tree * 1.1) * 0.012
-      const sxz = lerp(0.25, 1.0, g)
-      // Scaled local offset about the trunk base (y grows, x/z restrained).
-      tmpOff.current.set(cp.off[0] * sxz, cp.off[1] * g, cp.off[2] * sxz)
-      // Tilt the offset by the small sway rotation (Z then X — small-angle order
-      // is visually negligible) so the canopy arcs with the trunk.
-      tmpOff.current.applyAxisAngle(AXIS_Z, sz)
-      tmpOff.current.applyAxisAngle(AXIS_X, sx)
-      inst.position.set(tr.x + tmpOff.current.x, tmpOff.current.y, tr.z + tmpOff.current.z)
-      inst.scale.setScalar(cp.r * sxz)
-      inst.rotation.set(sx, 0, sz)
-    })
   })
 
+  // [x, z, trunkH, r1, r2, r3] — three stacked canopy spheres per tree
+  const trees = [
+    { x: 6.5,  z: -3,  h: 4.4, r1: 1.25, r2: 0.95, r3: 0.60 },
+    { x: 7.8,  z: 1,   h: 3.6, r1: 1.05, r2: 0.80, r3: 0.50 },
+    { x: -7.2, z: 3,   h: 5.0, r1: 1.35, r2: 1.05, r3: 0.65 },
+    { x: -5.5, z: -2,  h: 3.2, r1: 0.85, r2: 0.65, r3: 0.40 },
+    { x: 5.0,  z: 4.5, h: 2.9, r1: 0.78, r2: 0.58, r3: 0.35 },
+    { x: -2.0, z: 6,   h: 2.5, r1: 0.65, r2: 0.48, r3: 0.30 },
+  ]
+
   return (
-    <group>
-      {/* Trunks — one instanced draw (unit tapered cylinder, base at y=0). */}
-      <Instances geometry={UNIT_TRUNK_GEO} material={trunkMat} limit={TREES.length}
-        castShadow frustumCulled={false}>
-        {TREES.map((_, i) => (
-          <Instance key={i} ref={el => { trunkRefs.current[i] = el as THREE.Object3D | null }} />
-        ))}
-      </Instances>
-      {/* Canopies — one instanced draw (unit sphere scaled per instance). */}
-      <Instances geometry={UNIT_CANOPY_GEO} material={canopyMat} limit={TREE_CANOPIES.length}
-        castShadow frustumCulled={false}>
-        {TREE_CANOPIES.map((_, i) => (
-          <Instance key={i} ref={el => { canopyRefs.current[i] = el as THREE.Object3D | null }} />
-        ))}
-      </Instances>
+    <group ref={groupRef}>
+      {trees.map((tr, i) => (
+        <group key={i} position={[tr.x, 0, tr.z]}>
+          {/* Trunk */}
+          <mesh castShadow position={[0, tr.h / 2, 0]} material={trunkMat}>
+            <cylinderGeometry args={[0.10, 0.24, tr.h, 7]} />
+          </mesh>
+          {/* Lower canopy — widest */}
+          <mesh castShadow position={[0, tr.h + tr.r1 * 0.45, 0]} material={canopyMat}>
+            <sphereGeometry args={[tr.r1, 11, 9]} />
+          </mesh>
+          {/* Mid canopy — offset slightly */}
+          <mesh castShadow position={[tr.r2 * 0.2, tr.h + tr.r1 * 0.9 + tr.r2 * 0.5, tr.r2 * -0.1]} material={canopyMat}>
+            <sphereGeometry args={[tr.r2, 10, 8]} />
+          </mesh>
+          {/* Top tuft */}
+          <mesh castShadow position={[0, tr.h + tr.r1 * 0.9 + tr.r2 * 1.0 + tr.r3 * 0.4, 0]} material={canopyMat}>
+            <sphereGeometry args={[tr.r3, 8, 7]} />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }
@@ -1000,54 +826,38 @@ const BACKDROP_HAZE = new THREE.Color(0x0a1422)   // aerial-haze horizon tint
 const BACKDROP_TREE = new THREE.Color(0x0c1a14)   // near-black hazed treeline
 const BACKDROP_SKIRT = new THREE.Color(0x0a1626)  // ground → horizon fade
 
-interface Hill { x: number; z: number; r: number; h: number; cone: boolean }
-
-// Inner treeline ring (radius 40–60) + a SECOND hazier far ring (radius 75–95)
-// so the horizon reads as receding layers, not one wall. Both arc behind/around
-// the house and never enter the ±16 shadow frustum (no shadow flags).
-function buildRing(N: number, radMin: number, radMax: number, base: number,
-                   rWide: number, hTall: number, zBias: number): Hill[] {
-  const arr: Hill[] = []
-  for (let i = 0; i < N; i++) {
-    const a = Math.PI * (0.62 + (i / (N - 1)) * 1.76) // ~112°..430°
-    const rad = base + Math.sin(i * 2.3) * 9
-    const radius = Math.max(radMin, Math.min(radMax, rad + 8))
-    const x = Math.cos(a) * radius
-    const z = Math.sin(a) * radius + zBias
-    const r = rWide + (Math.sin(i * 1.7) * 0.5 + 0.5) * rWide
-    const h = hTall + (Math.sin(i * 0.9) * 0.5 + 0.5) * hTall * 2
-    arr.push({ x, z, r, h, cone: i % 2 === 0 })
-  }
-  return arr
-}
-
 function DistantBackdrop() {
-  const coneMat  = useRef<THREE.MeshStandardMaterial>(null)
-  const ballMat  = useRef<THREE.MeshStandardMaterial>(null)
-  const skirtRef = useRef<THREE.MeshStandardMaterial>(null)
+  const matsRef   = useRef<THREE.MeshStandardMaterial[]>([])
+  const skirtRef  = useRef<THREE.MeshStandardMaterial>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
   const beatT     = useBeatStore(s => s.beatT)
 
-  // Inner ring (the original 26-hill treeline) + a second, farther, hazier ring.
-  const inner = useMemo(() => buildRing(26, 40, 60, 42, 7, 4, -6), [])
-  const far   = useMemo(() => buildRing(20, 75, 95, 80, 9, 6, -10), [])
+  // Treeline mass — large cones/spheres on an arc from x:-150°..+150° behind
+  // the house, at radius 40–60, jittered in height/size for an organic ridge.
+  const hills = useMemo(() => {
+    const arr: { x: number; z: number; y: number; r: number; h: number; cone: boolean }[] = []
+    const N = 26
+    for (let i = 0; i < N; i++) {
+      // Wrap behind (z negative) and around the sides; skip the camera-facing front.
+      const a = Math.PI * (0.62 + (i / (N - 1)) * 1.76) // ~112°..430°
+      const rad = 42 + Math.sin(i * 2.3) * 9            // 33..51-ish, then clamped
+      const radius = Math.max(40, Math.min(60, rad + 8))
+      const x = Math.cos(a) * radius
+      const z = Math.sin(a) * radius - 6                // bias the ring behind the house
+      const r = 7 + (Math.sin(i * 1.7) * 0.5 + 0.5) * 7 // 7..14 wide
+      const h = 4 + (Math.sin(i * 0.9) * 0.5 + 0.5) * 8 // 4..12 tall
+      arr.push({ x, z, y: 0, r, h, cone: i % 2 === 0 })
+    }
+    return arr
+  }, [])
 
-  // Split each ring's hills into cone / sphere instance lists.
-  const cones = useMemo(() => [...inner, ...far].filter(h => h.cone), [inner, far])
-  const balls = useMemo(() => [...inner, ...far].filter(h => !h.cone), [inner, far])
-
-  // Warm the treeline + skirt slightly toward the horizon sky as dawn ramps —
-  // the per-hill loop collapses to two shared materials (one cone, one sphere).
+  // Warm the treeline + skirt slightly toward the horizon sky as dawn ramps.
   useFrame((_, delta) => {
     const afterT = dawnT(beatIndex, beatT)
-    if (coneMat.current) {
-      coneMat.current.color.lerpColors(BACKDROP_TREE, SKY_HOR_DAWN, afterT * 0.45)
-      coneMat.current.emissiveIntensity = lerp(coneMat.current.emissiveIntensity, afterT * 0.10, delta * 1.4)
-    }
-    if (ballMat.current) {
-      ballMat.current.color.lerpColors(BACKDROP_TREE, SKY_HOR_DAWN, afterT * 0.45)
-      ballMat.current.emissiveIntensity = lerp(ballMat.current.emissiveIntensity, afterT * 0.10, delta * 1.4)
-    }
+    matsRef.current.forEach(m => {
+      m.color.lerpColors(BACKDROP_TREE, SKY_HOR_DAWN, afterT * 0.45)
+      m.emissiveIntensity = lerp(m.emissiveIntensity, afterT * 0.10, delta * 1.4)
+    })
     if (skirtRef.current) {
       skirtRef.current.color.lerpColors(BACKDROP_SKIRT, SKY_HOR_DAWN, afterT * 0.4)
     }
@@ -1056,7 +866,11 @@ function DistantBackdrop() {
   return (
     <group>
       {/* Oversized ground skirt under the main 22×18 lawn — fades to horizon. */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} renderOrder={-9}>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, -0.04, 0]}
+        renderOrder={-9}
+      >
         <planeGeometry args={[120, 120]} />
         <meshStandardMaterial
           ref={skirtRef}
@@ -1068,23 +882,23 @@ function DistantBackdrop() {
         />
       </mesh>
 
-      {/* Treeline cones — one instanced draw (unit cone, base at y=0). */}
-      <Instances geometry={UNIT_CONE_GEO} limit={cones.length} frustumCulled={false}>
-        <meshStandardMaterial ref={coneMat} color={BACKDROP_TREE} roughness={1.0}
-          metalness={0} emissive={BACKDROP_HAZE} emissiveIntensity={0} fog={true} />
-        {cones.map((h, i) => (
-          <Instance key={i} position={[h.x, 0, h.z]} scale={[h.r, h.h, h.r]} />
-        ))}
-      </Instances>
-
-      {/* Treeline spheres — one instanced draw (unit sphere). */}
-      <Instances geometry={UNIT_SPHERE_GEO} limit={balls.length} frustumCulled={false}>
-        <meshStandardMaterial ref={ballMat} color={BACKDROP_TREE} roughness={1.0}
-          metalness={0} emissive={BACKDROP_HAZE} emissiveIntensity={0} fog={true} />
-        {balls.map((h, i) => (
-          <Instance key={i} position={[h.x, 0, h.z]} scale={h.r * 0.85} />
-        ))}
-      </Instances>
+      {/* Treeline / hill ring — mixed toward horizon, no shadow interaction. */}
+      {hills.map((hh, i) => (
+        <mesh key={i} position={[hh.x, hh.y, hh.z]}>
+          {hh.cone
+            ? <coneGeometry args={[hh.r, hh.h, 7]} />
+            : <sphereGeometry args={[hh.r * 0.85, 9, 7]} />}
+          <meshStandardMaterial
+            ref={el => { if (el) matsRef.current[i] = el }}
+            color={BACKDROP_TREE}
+            roughness={1.0}
+            metalness={0}
+            emissive={BACKDROP_HAZE}
+            emissiveIntensity={0}
+            fog={true}
+          />
+        </mesh>
+      ))}
     </group>
   )
 }
@@ -1116,11 +930,8 @@ function ForegroundSilhouettes() {
         </mesh>
       </group>
 
-      {/* Tall shrub / post mass, front-right. Pushed out to [12,0,6]: at the old
-          [8,0,8] this near-black mass sat ~3.5 units off the beat-0 lens (and the
-          beat-5 hero), filling/occluding the establishing frame. [12,0,6] keeps
-          it a soft right-edge framing vignette that clears every beat's frustum. */}
-      <group position={[12, 0, 6]}>
+      {/* Tall shrub / post mass, front-right. */}
+      <group position={[8, 0, 8]}>
         <mesh material={silMat} position={[0, 2.6, 0]}>
           <cylinderGeometry args={[0.9, 1.2, 5.2, 8]} />
         </mesh>
@@ -1449,10 +1260,6 @@ function LensFlare() {
   const beatIndex = useBeatStore(s => s.beatIndex)
   const beatT     = useBeatStore(s => s.beatT)
 
-  // Hoisted per-frame temporaries (zero allocations in useFrame).
-  const camDir = useRef(new THREE.Vector3())
-  const toSun  = useRef(new THREE.Vector3())
-
   const material = useMemo(() => new THREE.ShaderMaterial({
     vertexShader:   FLARE_VERTEX_SHADER,
     fragmentShader: FLARE_FRAGMENT_SHADER,
@@ -1475,12 +1282,12 @@ function LensFlare() {
     // Billboard: copy camera quaternion so plane always faces viewer
     meshRef.current.quaternion.copy(state.camera.quaternion)
 
-    // Fade in after scan; proportional to how much camera faces the sun.
-    // Temporaries are hoisted + mutated in place (no per-frame new Vector3).
+    // Fade in after scan; proportional to how much camera faces the sun
     const afterT  = beatIndex >= 2 ? Math.min(1, (beatIndex - 1 + beatT) / 1.2) : 0
-    state.camera.getWorldDirection(camDir.current)
-    toSun.current.copy(SUN_POS).sub(state.camera.position).normalize()
-    const facing  = Math.max(0, camDir.current.dot(toSun.current))
+    const camDir  = new THREE.Vector3()
+    state.camera.getWorldDirection(camDir)
+    const toSun   = SUN_POS.clone().sub(state.camera.position).normalize()
+    const facing  = Math.max(0, camDir.dot(toSun))
     const target  = afterT * facing * 0.72
     material.uniforms.uOpacity.value = lerp(material.uniforms.uOpacity.value, target, delta * 2.2)
   })
@@ -1720,170 +1527,7 @@ function MorningMist() {
   )
 }
 
-// ─── SCREEN-SPACE GOD RAYS (composer Effect, HIGH/MEDIUM) ────────────
-// Replaces the fake billboard shafts with a radial-occlusion light-scatter
-// pass that marches each fragment toward the sun's projected screen position,
-// accumulating the scene's own bright pixels. Because it samples the rendered
-// buffer, the house/trees actually OCCLUDE the shafts — the old billboards
-// passed straight through. Half-res implied by the composer's downscale; the
-// loop bound is a COMPILE-TIME constant with an early break on uSamples so it
-// degrades by tier (48 HIGH / 24 MEDIUM) and stays WebGL-portable.
-const GOD_RAY_EFFECT_FRAG = /* glsl */`
-  uniform vec2  uSunScreen;   // sun NDC→UV (0..1)
-  uniform float uStrength;    // beat-driven ramp (afterT)
-  uniform float uDensity;
-  uniform float uDecay;
-  uniform float uWeight;
-  uniform float uExposure;
-  uniform vec3  uTint;        // warm dawn tint
-  uniform int   uSamples;     // active step count (≤ GR_MAX_STEPS)
-
-  void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-    // Only scatter when the sun is roughly on-screen and the effect is active.
-    vec2 delta = (uv - uSunScreen) * uDensity / float(GR_MAX_STEPS);
-    vec2 coord = uv;
-    float illum = 1.0;
-    vec3  accum = vec3(0.0);
-    for (int i = 0; i < GR_MAX_STEPS; i++) {
-      if (i >= uSamples) break;                 // early-out by tier
-      coord -= delta;
-      vec3 s = texture2D(inputBuffer, coord).rgb;
-      // Keep only the bright (sun/sky/glints) pixels so it reads as light shafts.
-      float lum = max(0.0, dot(s, vec3(0.299, 0.587, 0.114)) - 0.55);
-      accum += s * lum * illum * uWeight;
-      illum *= uDecay;
-    }
-    vec3 rays = accum * uExposure * uStrength * uTint;
-    outputColor = vec4(inputColor.rgb + rays, inputColor.a);
-  }
-`
-
-class GodRaysEffect extends Effect {
-  // Optional (unused) args object so wrapEffect's ConstructorParameters<T>[0]
-  // resolves to a props object, not `undefined` (which would poison the wrapped
-  // component's prop type into `undefined`).
-  constructor(_props: Record<string, never> = {}) {
-    super('YardGodRays', GOD_RAY_EFFECT_FRAG, {
-      blendFunction: BlendFunction.NORMAL,
-      // CONVOLUTION: this effect reads inputBuffer at marched offsets, so it
-      // must run as a standalone pass (postprocessing won't merge convolution
-      // effects into the shared pass where arbitrary texture reads break).
-      attributes: EffectAttribute.CONVOLUTION,
-      defines: new Map<string, string>([['GR_MAX_STEPS', '48']]),
-      uniforms: new Map<string, THREE.Uniform>([
-        ['uSunScreen', new THREE.Uniform(new THREE.Vector2(0.5, 0.5))],
-        ['uStrength',  new THREE.Uniform(0)],
-        ['uDensity',   new THREE.Uniform(0.7)],
-        ['uDecay',     new THREE.Uniform(0.96)],
-        ['uWeight',    new THREE.Uniform(0.5)],
-        ['uExposure',  new THREE.Uniform(0.9)],
-        ['uTint',      new THREE.Uniform(new THREE.Color(1.0, 0.82, 0.5))],
-        ['uSamples',   new THREE.Uniform(48)],
-      ]),
-    })
-  }
-}
-
-// drei's wrapEffect types the ref as the CONSTRUCTOR (typeof Effect); at runtime
-// it forwards the Effect INSTANCE. Re-type the component so the instance ref is
-// honest (the props are unchanged).
-const GodRaysWrapped = wrapEffectImpl(GodRaysEffect) as React.ForwardRefExoticComponent<
-  React.RefAttributes<GodRaysEffect>
->
-
-function ScreenGodRays({ quality }: { quality: QualityConfig }) {
-  const ref       = useRef<GodRaysEffect>(null)
-  const beatIndex = useBeatStore(s => s.beatIndex)
-  const beatT     = useBeatStore(s => s.beatT)
-  const { camera } = useThree()
-  const tmpSun = useRef(new THREE.Vector3())
-
-  // 48 steps on HIGH, 24 on MEDIUM (constant loop bound + early break).
-  const samples = quality.tier === 'HIGH' ? 48 : 24
-
-  useFrame(() => {
-    const eff = ref.current
-    if (!eff) return
-    // Project the shared sun world position to screen UV once per frame.
-    tmpSun.current.copy(SUN_POS).project(camera)
-    const sun = eff.uniforms.get('uSunScreen')!.value as THREE.Vector2
-    sun.set(tmpSun.current.x * 0.5 + 0.5, tmpSun.current.y * 0.5 + 0.5)
-    // Same ramp the old billboard shafts used: bloom in beat2→, peak beat5.
-    const afterT = beatIndex >= 2 ? Math.min(1, (beatIndex - 2 + beatT) / 1.8) : 0
-    eff.uniforms.get('uStrength')!.value = afterT * 0.85
-    ;(eff.uniforms.get('uSamples')!.value as number) = samples
-  })
-
-  return <GodRaysWrapped ref={ref} />
-}
-
-// ─── HEAT-HAZE (composer Effect, HIGH/MEDIUM) ────────────────────────
-// A subtle curl-warp shimmer over the warming horizon band + near the sun —
-// the air ripple over a sun-warmed lawn at dawn. Offsets the scene UV by curl
-// noise (GLSL_NOISE_CHUNK), masked to the lower screen band and to sun
-// proximity. uAmp kept tiny so it's felt, not seen.
-const HEAT_HAZE_FRAG = /* glsl */`
-  ${GLSL_NOISE_CHUNK}
-  uniform float uTime;
-  uniform vec2  uSunScreen;
-  uniform float uStrength;   // dawnT ramp
-  uniform float uFreq;
-  uniform float uAmp;
-
-  void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-    vec2  q   = uv * uFreq + vec2(0.0, uTime * 0.4);
-    vec2  off = curl2(q) * uAmp;
-    float band = smoothstep(0.55, 0.30, uv.y);                  // strongest near horizon
-    float sun  = smoothstep(0.5, 0.0, distance(uv, uSunScreen));
-    vec2  warped = uv + off * band * (0.4 + sun) * uStrength;
-    outputColor = texture2D(inputBuffer, warped);
-  }
-`
-
-class HeatHazeEffect extends Effect {
-  constructor(_props: Record<string, never> = {}) {
-    super('YardHeatHaze', HEAT_HAZE_FRAG, {
-      blendFunction: BlendFunction.NORMAL,
-      // CONVOLUTION: samples inputBuffer at a warped UV (dependent texture read).
-      attributes: EffectAttribute.CONVOLUTION,
-      uniforms: new Map<string, THREE.Uniform>([
-        ['uTime',      new THREE.Uniform(0)],
-        ['uSunScreen', new THREE.Uniform(new THREE.Vector2(0.5, 0.5))],
-        ['uStrength',  new THREE.Uniform(0)],
-        ['uFreq',      new THREE.Uniform(5.0)],
-        ['uAmp',       new THREE.Uniform(0.004)],
-      ]),
-    })
-  }
-}
-
-const HeatHazeWrapped = wrapEffectImpl(HeatHazeEffect) as React.ForwardRefExoticComponent<
-  React.RefAttributes<HeatHazeEffect>
->
-
-function HeatHaze() {
-  const ref       = useRef<HeatHazeEffect>(null)
-  const beatIndex = useBeatStore(s => s.beatIndex)
-  const beatT     = useBeatStore(s => s.beatT)
-  const { camera } = useThree()
-  const tmpSun = useRef(new THREE.Vector3())
-
-  useFrame((_, delta) => {
-    const eff = ref.current
-    if (!eff) return
-    eff.uniforms.get('uTime')!.value += delta
-    tmpSun.current.copy(SUN_POS).project(camera)
-    const sun = eff.uniforms.get('uSunScreen')!.value as THREE.Vector2
-    sun.set(tmpSun.current.x * 0.5 + 0.5, tmpSun.current.y * 0.5 + 0.5)
-    eff.uniforms.get('uStrength')!.value = dawnT(beatIndex, beatT)
-  })
-
-  return <HeatHazeWrapped ref={ref} />
-}
-
-// ─── GOD-RAY SHAFTS — volumetric light from sun, post-scan (MOBILE) ──
-// Billboard fallback for the tiers with no composer. HIGH/MEDIUM use the
-// screen-space ScreenGodRays Effect above instead.
+// ─── GOD-RAY SHAFTS — volumetric light from sun, post-scan ───────────
 function GodRayShafts() {
   const groupRef  = useRef<THREE.Group>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
@@ -2030,11 +1674,6 @@ function ExposureController() {
   const beatT     = useBeatStore(s => s.beatT)
 
   useFrame(() => {
-    // Back to the pre-IBL 1.15→1.6 floor now that the analytic ambient/hemi rig
-    // carries the full fill again (the 1.25→1.7 bump only existed to paper over
-    // the dropped ambient). The composer's <ToneMapping> reads
-    // renderer.toneMappingExposure, so this single ramp drives both the
-    // PP-off (renderer ACES) and PP-on (composer AgX) paths.
     gl.toneMappingExposure = lerp(1.15, 1.6, dawnT(beatIndex, beatT))
   })
 
@@ -2045,11 +1684,7 @@ function ExposureController() {
 // Focus lands on the active subject; widens on the beat5 reveal.
 const BEAT_BOKEH = [2.0, 2.5, 4.5, 3.5, 5.0, 1.0]
 // Normalized focus distance (mid-yard subject reads sharp); opens on beat5.
-// Re-tuned after the rig moves (camera.md §5): beat2 pulls tighter (closer rack
-// onto the JobCard from pos [4.5,5,5.5]); beat3's higher crane needs a fraction
-// more distance; beat4's lower drop a fraction less. DOF is HIGH/MEDIUM only —
-// no shot depends on it.
-const BEAT_FOCUS_DIST = [0.030, 0.028, 0.022, 0.027, 0.021, 0.035]
+const BEAT_FOCUS_DIST = [0.030, 0.028, 0.024, 0.026, 0.022, 0.035]
 
 function CinematicDOF() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2086,34 +1721,6 @@ function CinematicDOF() {
   )
 }
 
-// ─── CONTACT SHADOWS — cheap soft grounding, re-baked once at beat≥2 ──
-// N8AO is HIGH-only; ContactShadows grounds the hero masses (house, trees,
-// hedges) on every PP tier. frames={1} bakes ONCE — but trees/hedges GROW
-// during the scan, so a mount-time bake captures them tiny. We force exactly
-// one re-bake the first time beatIndex reaches 2 (growth complete) by bumping
-// the keyed remount, so the baked contact shadow matches the grown geometry.
-function SceneContactShadows({ quality }: { quality: QualityConfig }) {
-  const beatIndex = useBeatStore(s => s.beatIndex)
-  const [baked, setBaked] = useState(0)
-  useEffect(() => {
-    if (beatIndex >= 2 && baked === 0) setBaked(1)
-  }, [beatIndex, baked])
-
-  return (
-    <ContactShadows
-      key={baked}
-      position={[0, 0.015, 0]}
-      scale={26}
-      resolution={quality.tier === 'HIGH' ? 1024 : 512}
-      far={9}
-      blur={2.6}
-      opacity={0.55}
-      color="#0a1a08"
-      frames={1}
-    />
-  )
-}
-
 // ─── INNER SCENE ─────────────────────────────────────────────────────
 function SceneContent({ quality }: { quality: QualityConfig }) {
   const scanProgress = useBeatStore(s => s.scanProgress)
@@ -2122,121 +1729,54 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
   const particleCount = quality.tier === 'HIGH' ? 280 : quality.tier === 'MEDIUM' ? 140 : 60
   const enableDOF     = quality.tier === 'HIGH' || quality.tier === 'MEDIUM'
 
-  // Mobile tiers drop the heavy decorative layers (god rays, aura, wake, dust)
-  // so the beat story still reads (scan → green → route → invoice → crew) at a
-  // fraction of the fill cost. Gating is purely on WHICH layers mount — never on
-  // beatStore / scanZ / scanProgress / camera, which stay tier-identical.
-  const heavyDecor = !quality.useSimplifiedScene
-
-  // ── Runtime perf governor (drei PerformanceMonitor) ──────────────────
-  // degradeLevel may flap ONLY effect toggles (N8AO→DoF→Bloom→clouds) + dpr
-  // (AdaptiveDpr). It NEVER touches grassCount or shadowMapSize (those rebuild
-  // geometry/shadow maps and would stutter), and never the beat story.
-  const [degradeLevel, setDegradeLevel] = useState(0)
-
-  const allowAO    = quality.enableSSAO && degradeLevel < 1
-  const allowDOF   = enableDOF && degradeLevel < 2
-  const allowBloom = quality.enableBloom && degradeLevel < 3
-  // Clouds (SkyDecor) are fill-rate heavy → drop them first under load by
-  // handing SkyDecor a downgraded tier (this only affects clouds + bird count,
-  // never grass/shadows, which read the un-degraded quality).
-  const decorQuality: QualityConfig = degradeLevel >= 1 && (quality.tier === 'HIGH' || quality.tier === 'MEDIUM')
-    ? { ...quality, tier: 'MOBILE_HIGH' }
-    : quality
-
-  // Screen-space god rays run inside the composer on HIGH/MEDIUM; mobile keeps
-  // the cheap billboard shafts as the no-composer fallback.
-  const screenGodRays = quality.enablePostProcessing && degradeLevel < 3
-
   return (
     <>
-      <PerformanceMonitor
-        onDecline={() => setDegradeLevel(l => Math.min(3, l + 1))}
-        onIncline={() => setDegradeLevel(l => Math.max(0, l - 1))}
-      />
-      <AdaptiveDpr pixelated={false} />
-      <AdaptiveEvents />
-
       <FogController />
       <ExposureController />
       <SkyDome />
-      <SkyDecor quality={decorQuality} />
       <CameraController />
       <SceneLighting quality={quality} />
       <DistantBackdrop />
       <Ground />
       <MorningMist />
-      <House quality={quality} />
       <Structures />
-      <FlowerBeds quality={quality} />
-      <Fence quality={quality} />
-      <WaterFeature quality={quality} />
       <ForegroundSilhouettes />
       <BarePatches />
       <Hedges />
       <Trees />
       <GrassMesh count={quality.grassCount} scanZ={scanZ} scanProgress={scanProgress} />
-      {quality.enablePostProcessing && <SceneContactShadows quality={quality} />}
       <GroundAura />
       <RouteRibbon />
       <InvoicePulseRing />
       <CrewLights />
       <ScanPlane />
       <ScanCurtain />
-      {heavyDecor && <ScanWake />}
+      <ScanWake />
       <EnergyRings />
       {quality.tier !== 'MINIMAL' && <FloatingParticles count={particleCount} />}
-      {heavyDecor && <AerialHazeDust />}
+      <AerialHazeDust />
       <CuttyReticle />
       <LensFlare />
-      {/* Billboard god rays only on the no-composer tiers; HIGH/MEDIUM get the
-          screen-space ScreenGodRays Effect in the composer below. */}
-      {!quality.enablePostProcessing && heavyDecor && <GodRayShafts />}
+      <GodRayShafts />
       <YardLabels />
       <JobCard />
       <InvoicePanel />
       <CrewPins />
 
       {quality.enablePostProcessing && (
-        // Cinematic-correct order: AO → DoF → Bloom → grade → ToneMapping(AgX)
-        // → lens character (god rays / heat-haze / CA / Vignette / Noise).
-        // multisampling + normal pass on HIGH (N8AO reads the normal buffer).
-        <EffectComposer
-          multisampling={quality.tier === 'HIGH' ? 4 : 0}
-          enableNormalPass
-          frameBufferType={THREE.HalfFloatType}
-        >
-          {/* 1. AO — darken cavities before anything bright (HIGH only). */}
-          {allowAO ? (
-            <N8AO aoRadius={1.6} distanceFalloff={1.0} intensity={2.2}
-              aoSamples={16} denoiseSamples={4} denoiseRadius={12} halfRes />
+        <EffectComposer>
+          {enableDOF ? <CinematicDOF /> : <></>}
+          {quality.enableBloom ? (
+            <Bloom intensity={0.95} luminanceThreshold={0.80} luminanceSmoothing={0.3} radius={0.5} />
           ) : <></>}
-          {/* 2. DoF — depth blur on the (AO-darkened) buffer. */}
-          {allowDOF ? <CinematicDOF /> : <></>}
-          {/* 3. Bloom — mipmap-blur the HDR highlights (grass tips, sun, glints). */}
-          {allowBloom ? (
-            <Bloom mipmapBlur intensity={0.8} luminanceThreshold={0.62}
-              luminanceSmoothing={0.25} radius={0.7} />
-          ) : <></>}
-          {/* 4. Color grade — split-tone the dawn (teal shadows / amber highs). */}
-          <HueSaturation saturation={0.08} hue={0.0} />
-          <BrightnessContrast brightness={0.0} contrast={0.10} />
-          {/* 5. Tonemapping AS AN EFFECT — AgX desaturates highlights gracefully
-                (keeps the saturated sunrise off ACES's orange hue-skew). The
-                renderer keeps ACES for the PP-off mobile fallback. */}
-          <ToneMapping mode={ToneMappingMode.AGX} />
-          {/* 6. Lens character on the graded image — god rays, heat-haze, then
-                CA / vignette / grain LAST so they sit on final pixels. */}
-          {screenGodRays ? <ScreenGodRays quality={quality} /> : <></>}
-          <HeatHaze />
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}
-            offset={[0.0009, 0.0009] as unknown as THREE.Vector2}
+            offset={[0.0012, 0.0012] as unknown as THREE.Vector2}
             radialModulation={true}
-            modulationOffset={0.25}
+            modulationOffset={0.2}
           />
-          <Vignette offset={0.42} darkness={0.62} />
-          <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.03} />
+          <Vignette offset={0.5} darkness={0.58} />
+          <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.035} />
         </EffectComposer>
       )}
     </>
@@ -2251,13 +1791,11 @@ export default function YardSceneCanvas({ quality }: { quality: QualityConfig })
       gl={{
         antialias: quality.tier !== 'MOBILE_LOW' && quality.tier !== 'MINIMAL',
         toneMapping: THREE.ACESFilmicToneMapping,
-        toneMappingExposure: 1.25,
+        toneMappingExposure: 1.15,
         powerPreference: 'high-performance',
         alpha: false,
         stencil: false,
-        // No canvas capture exists in src/ → drop preserveDrawingBuffer (a real
-        // cost on mobile GPUs; the browser otherwise keeps the back buffer).
-        preserveDrawingBuffer: false,
+        preserveDrawingBuffer: true,
       }}
       dpr={quality.dpr}
       shadows={quality.shadowMapSize > 0}
