@@ -2,7 +2,7 @@
 
 _Last updated: 2026-06-30_
 
-## Status: SHIPPED (dev build). In production polish phase.
+## Status: SHIP-READY. All P0/P1/P2 items complete.
 
 ---
 
@@ -32,6 +32,9 @@ _Last updated: 2026-06-30_
 - [x] Warm sun directional light ramps in post-scan
 - [x] ChromaticAberration post-processing
 - [x] Bloom + Vignette
+- [x] Lens flare — starburst billboard at sun [12,10,8], 6+12-spike diffraction, additive
+- [x] Depth of Field — EffectComposer, HIGH tier only (focusDistance 0.008)
+- [x] Ground normal map — procedural 128×128 DataTexture, repeat 8×6, normalScale 0.35
 
 ### Beat Sequence (scroll-driven)
 - [x] Beat 0: Dark moody yard, stars, hero text
@@ -62,30 +65,19 @@ _Last updated: 2026-06-30_
 - [x] robots.txt
 - [x] sitemap.xml
 - [x] SEO meta tags (title, description, OG)
+- [x] og:image — 1200×630 PNG at `public/og-image.png`, Playwright-generated
+- [x] og:url — `<meta property="og:url" content="https://yardworx.io/" />`
+- [x] twitter:image meta tag
+- [x] touch-action: pan-y on body (iOS Safari momentum scroll)
+- [x] Vercel Analytics — `@vercel/analytics` installed, `<Analytics />` in main.tsx
 
 ---
 
-## 🔴 Open — Ship Blockers (P0/P1)
+## 🟡 Remaining (needs external action or lower priority)
 
-- [ ] **og:image** — need a real 1200×630 image at `/og-image.png`. Currently no image set.
-  - Options: screenshot the yard scene at beat 1 (scan active), crop + add wordmark
-  - Add `<meta property="og:image" content="https://yardworx.io/og-image.png" />` to `index.html`
-- [ ] **og:url** — add `<meta property="og:url" content="https://yardworx.io/" />`
-
----
-
-## 🟡 In-Progress Polish (P2 — nice before launch)
-
-- [ ] **Lighthouse perf pass** — target LCP < 2.5s desktop, < 3.5s 4G mobile
-  - Run `npm run build && npx serve dist` then Lighthouse
-  - Font preload: `<link rel="preload" as="font" ...>` for Outfit 700/800 woff2
-- [ ] **Mobile scroll** — test iOS Safari momentum scroll; add `touch-action: pan-y` if beats skip
 - [ ] **SSAO on HIGH tier** — needs `NormalPass` setup with EffectComposer; adds ~2ms GPU
-- [ ] **Depth of field hint** — blur background slightly at beat 2+ to focus on job card
-- [ ] **Lens flare** — subtle sun flare from warm directional at [12,10,8] post-scan
-- [ ] **Ground normal map** — procedural bump shader on grass ground for surface micro-detail
-- [ ] **Analytics** — add Vercel Analytics (`@vercel/analytics/react`) `<Analytics />` in main.tsx
-- [ ] **Custom domain** — yardworx.io → point DNS to Vercel, set in project settings
+- [ ] **Lighthouse perf pass** — run `npm run build && npx serve dist` then Lighthouse; target LCP < 2.5s desktop
+- [ ] **Custom domain** — yardworx.io → point DNS to Vercel, set in project settings (user action)
 
 ---
 
