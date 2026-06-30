@@ -66,6 +66,17 @@ export const GRASS_VERTEX_SHADER = /* glsl */`
   }
 
   void main() {
+    // Growth morph: blade height emerges from ground as scan sweeps through
+    float scanDist = aOffset.z - uScanZ;               // > 0 = not yet reached
+    float growthT  = clamp(1.0 - scanDist / 2.5, 0.0, 1.0);
+    float stagger  = sin(aPhase * 6.2831) * 0.18;     // per-blade timing variation
+    float growth   = smoothstep(0.0, 1.0, clamp(growthT + stagger, 0.0, 1.0) * uScanProgress);
+    float scaleY   = mix(0.04, 1.0, growth);
+
+    // Spring oscillation: newly-emerged blades wobble before settling
+    float wobble = sin(uTime * 9.5 + aPhase * 5.8) * 0.12 * (1.0 - growth) * uScanProgress;
+    scaleY = clamp(scaleY + wobble * scaleY, 0.04, 1.14);
+
     float windFactor = aBladeTip * aBladeTip;
 
     vec2 wUv  = (aOffset.xz + vec2(uTime * 1.6, uTime * 0.55)) * 0.12;
@@ -74,7 +85,8 @@ export const GRASS_VERTEX_SHADER = /* glsl */`
     float base = sin(uTime * 1.4 + aPhase) * 0.20 + sin(uTime * 2.1 + aPhase * 1.6) * 0.09;
     float bend = (base + sin(uTime * 0.45 + aOffset.x * 0.18) * gust * 0.24) * uWindStrength * windFactor;
 
-    vec3 pos   = position * aScale;
+    // Height scaled by growth; width stays at aScale so blades don't get thin
+    vec3 pos   = vec3(position.x * aScale, position.y * aScale * scaleY, position.z * aScale);
     pos.x     += bend;
     pos.z     += bend * 0.22;
     pos.y      = max(pos.y, 0.0);
@@ -246,6 +258,53 @@ export const PARTICLE_FRAGMENT_SHADER = /* glsl */`
     vec3  color = mix(vec3(0.04, 0.65, 0.28), vec3(0.30, 1.0, 0.52), pulse);
 
     gl_FragColor = vec4(color, alpha);
+  }
+`
+
+// ── Scan-wake sparkle — particles burst upward from the scan line ─────
+export const WAKE_VERTEX_SHADER = /* glsl */`
+  attribute float aPhase;
+  uniform float uTime;
+  uniform float uScanZ;
+  varying float vFade;
+  varying float vPhase;
+
+  void main() {
+    float t    = fract(uTime * 2.1 + aPhase);   // 0→1 lifecycle per particle
+
+    vec3 pos   = position;
+    pos.z      = uScanZ + sin(aPhase * 6.2831) * 0.9 + cos(aPhase * 3.7) * t * 1.4;
+    pos.y     += t * t * 5.5 + t * 0.3;          // accelerate upward
+    pos.x     += sin(aPhase * 13.7 + t * 2.5) * t * 1.6;
+
+    // Sharp fade in, longer fade out
+    vFade  = t < 0.08 ? t / 0.08 : (1.0 - t) / 0.92;
+    vFade  = clamp(vFade * vFade, 0.0, 1.0);
+    vPhase = aPhase;
+
+    vec4 mv      = modelViewMatrix * vec4(pos, 1.0);
+    gl_PointSize = (2.5 + sin(aPhase * 7.3) * 1.2) * (320.0 / -mv.z);
+    gl_Position  = projectionMatrix * mv;
+  }
+`
+
+export const WAKE_FRAGMENT_SHADER = /* glsl */`
+  uniform float uOpacity;
+  uniform float uTime;
+  varying float vFade;
+  varying float vPhase;
+
+  void main() {
+    vec2  uv   = gl_PointCoord - 0.5;
+    float r    = length(uv);
+    float disc = 1.0 - smoothstep(0.18, 0.5, r);
+    float glow = exp(-r * 10.0) * 0.9;
+    float alpha = (disc + glow) * uOpacity * vFade;
+
+    float spark  = pow(max(0.0, sin(uTime * 14.0 + vPhase * 9.42)), 7.0);
+    vec3  color  = mix(vec3(0.14, 0.92, 0.40), vec3(0.85, 1.0, 0.92), spark);
+
+    gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
   }
 `
 

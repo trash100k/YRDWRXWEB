@@ -12,6 +12,7 @@ import {
   SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER,
   PARTICLE_VERTEX_SHADER, PARTICLE_FRAGMENT_SHADER,
   RING_VERTEX_SHADER, RING_FRAGMENT_SHADER,
+  WAKE_VERTEX_SHADER, WAKE_FRAGMENT_SHADER,
   FLARE_VERTEX_SHADER, FLARE_FRAGMENT_SHADER,
 } from './shaders'
 
@@ -271,51 +272,86 @@ function ScanCurtain() {
 
 // ─── GROUND ──────────────────────────────────────────────────────────
 function Ground() {
-  const matRef    = useRef<THREE.MeshStandardMaterial>(null)
-  const beatIndex = useBeatStore(s => s.beatIndex)
-  const beatT     = useBeatStore(s => s.beatT)
+  const beatIndex  = useBeatStore(s => s.beatIndex)
+  const beatT      = useBeatStore(s => s.beatT)
+  const shaderUnis = useRef<{ uGroundPulse: { value: number }; uGroundTime: { value: number } } | null>(null)
 
-  const normalMap = useMemo(() => {
-    const size = 128
-    const data = new Uint8Array(size * size * 4)
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const i = (y * size + x) * 4
-        const fx = x / size
-        const fy = y / size
-        // Multi-frequency value noise for micro-surface normals
-        const n1 = Math.sin(fx * 47.3 + 3.1) * Math.cos(fy * 53.7 + 1.7)
-        const n2 = Math.sin(fx * 113.9 + 8.4) * Math.cos(fy * 97.1 + 4.2) * 0.5
-        const n3 = Math.sin(fx * 211.3 + 2.9) * Math.cos(fy * 193.7 + 6.8) * 0.25
-        const n  = (n1 + n2 + n3) / 1.75
-        data[i + 0] = Math.round(n * 28 + 128)   // R → x tangent
-        data[i + 1] = Math.round(n * 28 + 128)   // G → y tangent
-        data[i + 2] = 255                          // B → z (up)
+  const groundMat = useMemo(() => {
+    // Procedural normal map — multi-frequency value noise
+    const sz   = 128
+    const data = new Uint8Array(sz * sz * 4)
+    for (let y = 0; y < sz; y++) {
+      for (let x = 0; x < sz; x++) {
+        const i = (y * sz + x) * 4
+        const fx = x / sz, fy = y / sz
+        const n  = (Math.sin(fx * 47.3 + 3.1) * Math.cos(fy * 53.7 + 1.7)
+                  + Math.sin(fx * 113.9 + 8.4) * Math.cos(fy * 97.1 + 4.2) * 0.5
+                  + Math.sin(fx * 211.3 + 2.9) * Math.cos(fy * 193.7 + 6.8) * 0.25) / 1.75
+        data[i] = Math.round(n * 28 + 128)
+        data[i + 1] = Math.round(n * 28 + 128)
+        data[i + 2] = 255
         data[i + 3] = 255
       }
     }
-    const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat)
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping
-    tex.repeat.set(8, 6)
-    tex.needsUpdate = true
-    return tex
+    const normalTex = new THREE.DataTexture(data, sz, sz, THREE.RGBAFormat)
+    normalTex.wrapS = normalTex.wrapT = THREE.RepeatWrapping
+    normalTex.repeat.set(8, 6)
+    normalTex.needsUpdate = true
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: C.BEFORE_GRASS,
+      roughness: 0.95,
+      metalness: 0,
+      emissive: C.AFTER_GRASS,
+      emissiveIntensity: 0,
+      normalMap: normalTex,
+    })
+    mat.normalScale.set(0.35, 0.35)
+
+    // Inject post-scan ground ripple via onBeforeCompile
+    mat.onBeforeCompile = (shader) => {
+      shader.uniforms.uGroundPulse = { value: 0 }
+      shader.uniforms.uGroundTime  = { value: 0 }
+      shaderUnis.current = shader.uniforms as typeof shaderUnis.current
+
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <common>',
+        `#include <common>
+        uniform float uGroundPulse;
+        uniform float uGroundTime;`
+      )
+      shader.vertexShader = shader.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+        float _r   = length(transformed.xz);
+        float _rip = (sin(_r * 1.35 - uGroundTime * 2.1) * 0.5 + 0.5)
+                     * uGroundPulse * 0.045
+                     * max(0.0, 1.0 - _r / 11.0);
+        transformed.y += _rip;`
+      )
+    }
+
+    return mat
   }, [])
 
   useFrame((_, delta) => {
-    if (!matRef.current) return
     const afterAmount = beatIndex === 1 ? beatT : beatIndex >= 2 ? 1 : 0
-    const afterScan   = afterAmount > 0.5
-    matRef.current.color.lerp(afterScan ? C.AFTER_GRASS : C.BEFORE_GRASS, delta * 1.8)
-    matRef.current.roughness = lerp(matRef.current.roughness, afterScan ? 0.78 : 0.95, delta)
-    matRef.current.emissiveIntensity = lerp(matRef.current.emissiveIntensity, afterScan ? 0.06 : 0, delta * 1.5)
+    const isAfter     = afterAmount > 0.5
+    groundMat.color.lerp(isAfter ? C.AFTER_GRASS : C.BEFORE_GRASS, delta * 1.8)
+    groundMat.roughness = lerp(groundMat.roughness, isAfter ? 0.78 : 0.95, delta)
+    groundMat.emissiveIntensity = lerp(groundMat.emissiveIntensity, isAfter ? 0.06 : 0, delta * 1.5)
+
+    if (shaderUnis.current) {
+      shaderUnis.current.uGroundTime.value  += delta
+      shaderUnis.current.uGroundPulse.value  = lerp(
+        shaderUnis.current.uGroundPulse.value, isAfter ? 0.65 : 0, delta * 1.5
+      )
+    }
   })
 
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <planeGeometry args={[22, 18, 32, 32]} />
-      <meshStandardMaterial ref={matRef} color={C.BEFORE_GRASS} roughness={0.95} metalness={0}
-        emissive={C.AFTER_GRASS} emissiveIntensity={0}
-        normalMap={normalMap} normalScale={new THREE.Vector2(0.35, 0.35)} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow material={groundMat}>
+      <planeGeometry args={[22, 18, 40, 40]} />
     </mesh>
   )
 }
@@ -358,8 +394,10 @@ function GreenWave() {
 
 // ─── HEDGES ──────────────────────────────────────────────────────────
 function Hedges() {
+  const groupRef  = useRef<THREE.Group>(null)
   const matsRef   = useRef<THREE.MeshStandardMaterial[]>([])
   const beatIndex = useBeatStore(s => s.beatIndex)
+  const growYRef  = useRef(0.15)
 
   useFrame((_, delta) => {
     const afterScan = beatIndex >= 1
@@ -367,6 +405,12 @@ function Hedges() {
       mat.color.lerp(afterScan ? C.HEDGE_AFTER : C.HEDGE, delta * 1.2)
       mat.emissiveIntensity = lerp(mat.emissiveIntensity, afterScan ? 0.09 : 0, delta * 1.5)
     })
+
+    // Hedges grow up from ground when scan activates
+    growYRef.current = lerp(growYRef.current, afterScan ? 1.0 : 0.15, delta * (afterScan ? 3.5 : 2.0))
+    if (groupRef.current) {
+      groupRef.current.scale.y = growYRef.current
+    }
   })
 
   const hedgeMat = useMemo(() => {
@@ -376,7 +420,7 @@ function Hedges() {
   }, [])
 
   return (
-    <group>
+    <group ref={groupRef}>
       <group position={[-4, 0, -5]}>
         <mesh castShadow receiveShadow material={hedgeMat}><boxGeometry args={[7, 1.8, 1.2]} /></mesh>
         <mesh castShadow material={hedgeMat} position={[2.2, 0.7, 0.2]}><sphereGeometry args={[0.7, 8, 6]} /></mesh>
@@ -446,25 +490,54 @@ function Structures() {
         <meshStandardMaterial color={C.MULCH} roughness={1.0} />
       </mesh>
 
-      {/* Bare patches */}
-      {[
-        { pos: [3.2, 0.015, 2.5] as [number,number,number], sx: 1.2, sz: 0.7 },
-        { pos: [-1.0, 0.015, 4.2] as [number,number,number], sx: 0.8, sz: 0.5 },
-        { pos: [4.5, 0.015, -0.5] as [number,number,number], sx: 0.6, sz: 0.9 },
-      ].map((p, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={p.pos} scale={[p.sx, p.sz, 1]} receiveShadow>
+    </>
+  )
+}
+
+// ─── BARE PATCHES — dissolve/heal post-scan ───────────────────────────
+const PATCH_DEFS = [
+  { pos: [3.2,  0.015, 2.5]  as [number,number,number], sx: 1.2, sz: 0.7 },
+  { pos: [-1.0, 0.015, 4.2]  as [number,number,number], sx: 0.8, sz: 0.5 },
+  { pos: [4.5,  0.015, -0.5] as [number,number,number], sx: 0.6, sz: 0.9 },
+]
+
+function BarePatches() {
+  const matsRef   = useRef<THREE.MeshStandardMaterial[]>([])
+  const scaleRef  = useRef<number[]>(PATCH_DEFS.map(() => 1))
+  const beatIndex = useBeatStore(s => s.beatIndex)
+
+  useFrame((_, delta) => {
+    const afterScan = beatIndex >= 2
+    PATCH_DEFS.forEach((_, i) => {
+      const mat = matsRef.current[i]
+      if (!mat) return
+      scaleRef.current[i] = lerp(scaleRef.current[i], afterScan ? 0 : 1, delta * (afterScan ? 1.4 : 2))
+      mat.opacity = scaleRef.current[i]
+    })
+  })
+
+  return (
+    <>
+      {PATCH_DEFS.map((p, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={p.pos}
+          scale={[p.sx, p.sz, 1]} receiveShadow>
           <circleGeometry args={[0.9, 12]} />
-          <meshStandardMaterial color={0x5a4d35} roughness={1.0} />
+          <meshStandardMaterial ref={el => { if (el) matsRef.current[i] = el }}
+            color={0x5a4d35} roughness={1.0} transparent opacity={1} depthWrite={false} />
         </mesh>
       ))}
     </>
   )
 }
 
-// ─── TREES — multi-layer canopy, animated sway ────────────────────────
+// ─── TREES — multi-layer canopy, animated sway + scan-driven emergence ─
 function Trees() {
-  const groupRef = useRef<THREE.Group>(null)
+  const groupRef  = useRef<THREE.Group>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+
+  // Per-tree growth tracking (0 = tiny, 1 = full size)
+  const growthRef = useRef(new Array(6).fill(0.05))
 
   const canopyMat = useMemo(() => new THREE.MeshStandardMaterial({
     color: C.CANOPY, roughness: 0.86, emissive: C.CANOPY_AFTER, emissiveIntensity: 0,
@@ -475,17 +548,30 @@ function Trees() {
   }), [])
 
   useFrame((state, delta) => {
-    const t = state.clock.getElapsedTime()
+    const t      = state.clock.getElapsedTime()
     const afterScan = beatIndex >= 1
+    const scanZ  = beatIndex === 1 ? lerp(-10, 10, 1 - Math.pow(1 - beatT, 2.5))
+                 : beatIndex >= 2  ? 12 : -20
 
     canopyMat.color.lerp(afterScan ? C.CANOPY_AFTER : C.CANOPY, delta * 1.0)
     canopyMat.emissiveIntensity = lerp(canopyMat.emissiveIntensity, afterScan ? 0.10 : 0, delta * 1.2)
 
-    // Sway each tree root group
     if (groupRef.current) {
       groupRef.current.children.forEach((child, i) => {
+        // Cinematic sway
         child.rotation.z = Math.sin(t * 0.7 + i * 1.5) * 0.018
         child.rotation.x = Math.sin(t * 0.5 + i * 1.1) * 0.012
+
+        // Sequential emergence: trees grow up as scan sweeps past their Z
+        const tz     = trees[i].z
+        const passed = beatIndex >= 1 && scanZ > tz - 1.5
+        const target = passed ? 1.0 : 0.05
+        const speed  = passed ? 5.5 : 2.0  // snap up fast, shrink slowly
+        growthRef.current[i] = lerp(growthRef.current[i], target, delta * speed)
+
+        const g = growthRef.current[i]
+        // Y grows from ground up; X/Z are more restrained for natural look
+        child.scale.set(lerp(0.25, 1.0, g), g, lerp(0.25, 1.0, g))
       })
     }
   })
@@ -858,6 +944,56 @@ function CrewPins() {
   )
 }
 
+// ─── SCAN WAKE — sparkle burst trails the scan line ───────────────────
+function ScanWake() {
+  const beatIndex = useBeatStore(s => s.beatIndex)
+  const beatT     = useBeatStore(s => s.beatT)
+  const COUNT     = 220
+
+  const { geometry, material } = useMemo(() => {
+    const geo       = new THREE.BufferGeometry()
+    const positions = new Float32Array(COUNT * 3)
+    const phases    = new Float32Array(COUNT)
+
+    for (let i = 0; i < COUNT; i++) {
+      positions[i * 3 + 0] = (Math.random() - 0.5) * 24  // full yard width
+      positions[i * 3 + 1] = 0.15
+      positions[i * 3 + 2] = 0
+      phases[i] = Math.random()
+    }
+
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    geo.setAttribute('aPhase',   new THREE.Float32BufferAttribute(phases, 1))
+
+    const mat = new THREE.ShaderMaterial({
+      vertexShader:   WAKE_VERTEX_SHADER,
+      fragmentShader: WAKE_FRAGMENT_SHADER,
+      uniforms: {
+        uTime:    { value: 0 },
+        uScanZ:   { value: -20 },
+        uOpacity: { value: 0 },
+      },
+      transparent: true,
+      depthWrite:  false,
+      blending:    THREE.AdditiveBlending,
+    })
+
+    return { geometry: geo, material: mat }
+  }, [])
+
+  useFrame((_, delta) => {
+    material.uniforms.uTime.value += delta
+    const sz = beatIndex === 1
+      ? lerp(-10, 10, 1 - Math.pow(1 - beatT, 2.5))
+      : beatIndex >= 2 ? 12 : -20
+    material.uniforms.uScanZ.value = sz
+    const target = beatIndex === 1 ? 0.90 : 0
+    material.uniforms.uOpacity.value = lerp(material.uniforms.uOpacity.value, target, delta * 3.5)
+  })
+
+  return <points geometry={geometry} material={material} frustumCulled={false} />
+}
+
 // ─── INNER SCENE ─────────────────────────────────────────────────────
 function SceneContent({ quality }: { quality: QualityConfig }) {
   const beatIndex    = useBeatStore(s => s.beatIndex)
@@ -877,11 +1013,13 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
       <Ground />
       <GreenWave />
       <Structures />
+      <BarePatches />
       <Hedges />
       <Trees />
       <GrassMesh count={quality.grassCount} scanZ={scanZ} scanProgress={scanProgress} />
       <ScanPlane />
       <ScanCurtain />
+      <ScanWake />
       <EnergyRings />
       {quality.tier !== 'MINIMAL' && <FloatingParticles count={particleCount} />}
       <CuttyReticle />
