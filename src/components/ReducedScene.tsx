@@ -60,11 +60,12 @@ export default function ReducedScene() {
           marginBottom: '64px',
         }}>
           {[
-            { label: 'AI SCAN', title: 'AI that actually sees the yard.', body: 'Cutty identifies every issue. Estimates time. Adds to Thursday.' },
-            { label: 'JOB CARD', title: 'Quote built in seconds.', body: 'Hedge trim · Aerate · Edge · Mulch — $365 + tax. Done.' },
-            { label: 'ROUTE', title: 'Three jobs. One street.', body: "Johnson + 2 neighbors on Oak St. Route built automatically." },
-            { label: 'INVOICE', title: 'Paid before you left.', body: 'Invoice #1042 — $365.00 — Payment received.' },
-            { label: 'CREW', title: 'Your crew has the route.', body: 'Marcus and Dani are en route. No training needed.' },
+            { label: 'THE FORGE', title: 'Drop a photo. Get a quote.', body: 'Cutty forges a priced, designed estimate — #YW-2048, $395.11.' },
+            { label: 'ROUTE', title: 'One street. One route.', body: '7 stops sequenced automatically. Drive time down, jobs up.' },
+            { label: 'CHANNELS', title: 'Cutty drafts the reply.', body: 'Suggested message: $365, Thu 9:00 AM. You just tap Send.' },
+            { label: 'COCKPIT', title: 'Your whole operation, one screen.', body: 'Revenue, jobs, crews and a live map — every number in real time.' },
+            { label: 'FIELD MODE', title: "Your crew's whole day. One thumb.", body: 'Job card, Live Ear voice notes, photos and clock-out — offline-ready.' },
+            { label: 'PAID', title: 'Paid before you park the truck.', body: 'Invoice #1042 — $365.00 — marked PAID. Money in the bank.' },
           ].map(step => (
             <div key={step.label} style={{
               background: 'rgba(9,9,11,0.85)',

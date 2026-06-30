@@ -13,6 +13,12 @@ import { SocialProof } from '@/components/SocialProof'
 import { Pricing } from '@/components/Pricing'
 import { CanvasErrorBoundary } from '@/components/ErrorBoundary'
 import ReducedScene from '@/components/ReducedScene'
+import Forge from '@/sections/Forge'
+import Scheduler from '@/sections/Scheduler'
+import Channels from '@/sections/Channels'
+import Cockpit from '@/sections/Cockpit'
+import Field from '@/sections/Field'
+import Invoice from '@/sections/Invoice'
 
 const YardSceneCanvas = lazy(() => import('@/scenes/YardScene'))
 
@@ -101,13 +107,33 @@ function App() {
 
       {/* Below-fold sections */}
       <div style={{ position: 'relative', zIndex: 20, background: '#09090b' }}>
+        {/* Product tour — scan → quote → route → comms → dashboard → field → get-paid */}
+        <div id="features" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Forge />
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Scheduler />
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Channels />
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Cockpit />
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Field />
+        </div>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Invoice />
+        </div>
+
         {/* Stats + testimonials */}
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '0 24px' }}>
           <SocialProof />
         </div>
 
-        {/* Pricing */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        {/* Pricing — price reveal, the closer */}
+        <div id="pricing" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <Pricing />
         </div>
 

@@ -25,6 +25,42 @@
 
   --spring-stiffness: 320;
   --spring-damping: 28;
+
+  /* ---- Canonical product-tour tokens (additive; mirror scratchpad mockups) ---- */
+  /* Forest greens (brand bioluminescence) */
+  --green:        #05a845;  /* base brand green, solid fills/borders */
+  --green-bright: #2ad16a;  /* primary accent, mid green, most text/icons */
+  --green-deep:   #047a32;  /* gradient bottom, shadows */
+  --green-neon:   #5dffa0;  /* GLOW green — dots, scanlines, glow shadows, hover */
+
+  /* Money / alert orange (ember) */
+  --orange:        #E85D04; /* base ember, the "money" accent */
+  --orange-bright: #f97316; /* brighter ember for fills/sparklines */
+
+  /* Violet (atmospheric only, never UI) */
+  --violet: #7c3aed;        /* faint corner glows / sky only */
+
+  /* Neutrals (zinc ramp) */
+  --ink:   #050506;         /* page base / near-black canvas */
+  --ink-2: #060607;         /* gradient tail */
+  --ink-3: #09090b;         /* gradient head */
+  --h:     #fafafa;         /* headings / high-emphasis text */
+  --body:  #d4d4d8;         /* body text (zinc-300) */
+  --muted: #a1a1aa;         /* secondary text (zinc-400) */
+  --faint: #71717a;         /* micro-labels, captions (zinc-500) */
+
+  /* Surfaces & lines (white-alpha over ink) */
+  --card:    rgba(255, 255, 255, 0.04);  /* glass fill */
+  --card-hi: rgba(255, 255, 255, 0.055); /* raised glass / nested */
+  --bd:      rgba(255, 255, 255, 0.08);  /* glass border */
+  --hair:    rgba(255, 255, 255, 0.07);  /* internal dividers */
+
+  /* Status hues (pills) */
+  --status-blue: #60a5fa;        /* en-route */
+  --status-blue-text: #93c5fd;
+
+  /* Type aliases (mirror the mockup variable names) */
+  --font-display: 'Outfit', sans-serif;
 }
 
 *, *::before, *::after {
@@ -224,6 +260,31 @@ button:focus-visible {
 @keyframes smsSlide {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Forge scanline sweep — the "AI is looking" beat (2.6s ease-in-out) */
+@keyframes forgeScan {
+  0%   { transform: translateY(-120px); opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+/* Generic spinner — Forge live-log "run" row + any loading affordance */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Pricing Pro-card raised offset — gated to desktop so it never overlaps when stacked.
+   Sections apply className="pro-lift"; the transform only engages >= 980px. */
+.pro-lift {
+  transform: none;
+}
+@media (min-width: 980px) {
+  .pro-lift {
+    transform: translateY(-22px);
+  }
 }
 
 /* BeatAnnotation mobile: bottom-center below 768px */
