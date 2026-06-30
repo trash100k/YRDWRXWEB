@@ -1,0 +1,13 @@
+{
+  "name": "YardWorx — AI Yard OS",
+  "short_name": "YardWorx",
+  "description": "AI Yard OS for landscapers: quote, schedule, dispatch, invoice, and grow — all from one screen.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#05a845",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180", "purpose": "any maskable" }
+  ]
+}

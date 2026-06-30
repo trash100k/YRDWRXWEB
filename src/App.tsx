@@ -11,6 +11,7 @@ import { CTACard } from '@/components/CTACard'
 import { ScrollHint } from '@/components/ScrollHint'
 import { SocialProof } from '@/components/SocialProof'
 import { Pricing } from '@/components/Pricing'
+import { FAQ } from '@/components/FAQ'
 import { CanvasErrorBoundary } from '@/components/ErrorBoundary'
 import ReducedScene from '@/components/ReducedScene'
 import LazySection from '@/components/LazySection'
@@ -85,7 +86,9 @@ function App() {
         <div style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
           <HeroText />
           <ScrollHint />
-          <BeatAnnotation />
+          {/* HeroText owns beat 0; only show beat annotations from beat 1 on
+              to avoid stacking on top of the hero headline. */}
+          {beatIndex >= 1 && <BeatAnnotation />}
         </div>
 
         {/* Minimap (beat 3+) */}
@@ -122,62 +125,62 @@ function App() {
             Every block is code-split + viewport-lazy via <LazySection> with a
             reserved minHeight to avoid layout shift. */}
         <div id="features" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Forge />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <LiveEar />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Scheduler />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Channels />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Cockpit />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Field />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Invoice />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Reviews />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Analytics />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Portal />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Onboarding />
           </LazySection>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <LazySection minHeight={640}>
+          <LazySection minHeight={1200}>
             <Campaigns />
           </LazySection>
         </div>
@@ -187,9 +190,18 @@ function App() {
           <SocialProof />
         </div>
 
-        {/* Pricing — price reveal, the closer */}
-        <div id="pricing" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-          <Pricing />
+        {/* FAQ — answers the last objections before the price reveal.
+            Wrapped in #faq so the nav anchor resolves. */}
+        <div id="faq" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <FAQ />
+        </div>
+
+        {/* Pricing — price reveal, the closer. The #start wrapper is the
+            funnel landing target for every "Start free" CTA across the page. */}
+        <div id="start" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <div id="pricing">
+            <Pricing />
+          </div>
         </div>
 
         {/* Footer */}
@@ -206,9 +218,9 @@ function App() {
               YARDWORX
             </span>
             <span style={{ margin: '0 16px', opacity: 0.3 }}>·</span>
-            <a href="/privacy" style={{ color: '#52525b', textDecoration: 'none' }}>Privacy</a>
+            <a href="#" style={{ color: '#8b8b94', textDecoration: 'none' }}>Privacy</a>
             <span style={{ margin: '0 12px', opacity: 0.3 }}>·</span>
-            <a href="/terms" style={{ color: '#52525b', textDecoration: 'none' }}>Terms</a>
+            <a href="#" style={{ color: '#8b8b94', textDecoration: 'none' }}>Terms</a>
           </div>
           <div>© 2026 YardWorx. Built for landscapers.</div>
         </footer>

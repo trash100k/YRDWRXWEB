@@ -994,11 +994,12 @@ export default function Scheduler() {
             One street.{' '}
             <span
               style={{
-                background: `linear-gradient(90deg, ${C.greenBright}, ${C.greenNeon})`,
+                background: `linear-gradient(120deg, ${C.greenNeon}, ${C.greenBright})`,
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 color: 'transparent',
+                filter: 'drop-shadow(0 0 18px rgba(93,255,160,0.35))',
               }}
             >
               One route.

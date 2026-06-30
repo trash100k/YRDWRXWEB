@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react'
 /* ------------------------------------------------------------------ */
 /* LazySection                                                         */
 /* Defers below-the-fold sections until they scroll near the viewport. */
-/* Reserves space up front so there is zero cumulative layout shift,   */
+/* Reserves space up front so it minimizes layout shift,               */
 /* and composes with React.lazy() children via <Suspense>.             */
 /* Dependency-free, SSR-safe, inline styles only.                      */
 /* ------------------------------------------------------------------ */
@@ -17,7 +17,7 @@ type LazySectionProps = {
 
 export default function LazySection({
   children,
-  minHeight = 600,
+  minHeight = 1200,
   rootMargin = '600px',
 }: LazySectionProps) {
   // If IntersectionObserver is unavailable (SSR / old runtimes), render

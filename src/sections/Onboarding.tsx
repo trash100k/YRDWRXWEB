@@ -69,7 +69,7 @@ const STEP3 = {
   desc: 'Invite foremen & techs. They get the field app instantly.',
   crew: [
     { initial: 'M', name: 'Marcus Reyes', role: 'Foreman', from: '#2ad16a', to: '#047a32' },
-    { initial: 'D', name: 'Dani Okafor', role: 'Tech', from: '#f97316', to: '#9a3412' },
+    { initial: 'D', name: 'Dani Kwon', role: 'Tech', from: '#f97316', to: '#9a3412' },
   ] as Crew[],
   invitePhone: '(602) 555-0148',
 }

@@ -471,16 +471,16 @@ const POINTS: DataPoint[] = [
 
 type XLabel = { x: number; label: string; fill: string }
 const X_LABELS: XLabel[] = [
-  { x: 40, label: 'JAN', fill: '#71717a' },
-  { x: 130, label: 'FEB', fill: '#71717a' },
-  { x: 220, label: 'MAR', fill: '#71717a' },
-  { x: 310, label: 'APR', fill: '#71717a' },
-  { x: 400, label: 'MAY', fill: '#71717a' },
-  { x: 490, label: 'JUN', fill: '#71717a' },
+  { x: 40, label: 'JAN', fill: '#8b8b94' },
+  { x: 130, label: 'FEB', fill: '#8b8b94' },
+  { x: 220, label: 'MAR', fill: '#8b8b94' },
+  { x: 310, label: 'APR', fill: '#8b8b94' },
+  { x: 400, label: 'MAY', fill: '#8b8b94' },
+  { x: 490, label: 'JUN', fill: '#8b8b94' },
   { x: 580, label: 'JUL', fill: '#5dffa0' },
-  { x: 670, label: 'AUG', fill: '#71717a' },
-  { x: 760, label: 'SEP', fill: '#52525b' },
-  { x: 840, label: 'OCT', fill: '#52525b' },
+  { x: 670, label: 'AUG', fill: '#8b8b94' },
+  { x: 760, label: 'SEP', fill: '#8b8b94' },
+  { x: 840, label: 'OCT', fill: '#8b8b94' },
 ]
 
 const Y_LABELS = [
@@ -595,7 +595,7 @@ function RevenueChart({ reduced }: { reduced: boolean }) {
           </g>
 
           {/* y labels */}
-          <g fontFamily="JetBrains Mono" fontSize="10" fill="#71717a">
+          <g fontFamily="JetBrains Mono" fontSize="10" fill="#8b8b94">
             {Y_LABELS.map((y) => (
               <text key={y.label} x="2" y={y.y}>
                 {y.label}
@@ -909,7 +909,7 @@ function DonutPanel({ reduced }: { reduced: boolean }) {
             fontFamily="JetBrains Mono"
             fontSize="8"
             letterSpacing="1.5"
-            fill="#71717a"
+            fill="#8b8b94"
           >
             JOBS
           </text>
@@ -1004,7 +1004,7 @@ function SeasonalPanel({ reduced }: { reduced: boolean }) {
           </g>
           <g fontFamily="JetBrains Mono" fontSize="8" textAnchor="middle">
             {SEASON.map((b, i) => (
-              <text key={b.month} x={14 + i * 48 + 15} y="88" fill={b.label ?? '#71717a'}>
+              <text key={b.month} x={14 + i * 48 + 15} y="88" fill={b.label ?? '#8b8b94'}>
                 {b.month}
               </text>
             ))}
@@ -1089,9 +1089,20 @@ export default function Analytics() {
           }}
         >
           <div style={{ minWidth: 0 }}>
-            <Micro color={T.greenBright} style={{ display: 'block', marginBottom: '12px' }}>
-              OPERATIONS · REVENUE INTELLIGENCE
-            </Micro>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', marginBottom: '12px' }}>
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: T.greenBright,
+                  boxShadow: `0 0 8px ${T.greenBright}`,
+                  flexShrink: 0,
+                  animation: reduced ? undefined : 'scanPulse 1.6s ease-in-out infinite',
+                }}
+              />
+              <Micro color={T.greenBright}>OPERATIONS · REVENUE INTELLIGENCE</Micro>
+            </span>
             <h2
               id="analytics-heading"
               style={{

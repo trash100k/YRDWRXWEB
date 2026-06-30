@@ -1,4 +1,3 @@
-import React from "react";
 import { BEATS } from "../data/beats";
 
 // Map the four operating steps to the canonical beat copy in src/data/beats.ts.

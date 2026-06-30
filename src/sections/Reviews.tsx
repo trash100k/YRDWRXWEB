@@ -17,6 +17,7 @@ const T = {
   body: '#d4d4d8',
   muted: '#a1a1aa',
   faint: '#71717a',
+  faintText: '#8b8b94',
   card: 'rgba(255,255,255,0.04)',
   cardHi: 'rgba(255,255,255,0.06)',
   border: 'rgba(255,255,255,0.08)',
@@ -156,7 +157,7 @@ const microBase: CSSProperties = {
   fontWeight: 700,
   textTransform: 'uppercase',
   letterSpacing: '0.2em',
-  color: T.faint,
+  color: T.faintText,
 }
 
 function Micro({
@@ -455,7 +456,7 @@ function AggregateHero({ reduced }: { reduced: boolean }) {
             marginBottom: '8px',
           }}
         >
-          <Micro style={{ fontSize: '9px', letterSpacing: '0.18em', color: T.faint }}>
+          <Micro style={{ fontSize: '9px', letterSpacing: '0.18em', color: T.faintText }}>
             {AGGREGATE.trendLabel}
           </Micro>
           <span style={{ fontFamily: T.mono, fontSize: '11px', fontWeight: 600, color: T.greenBright }}>
@@ -613,7 +614,7 @@ function AutoRequestCard({ reduced }: { reduced: boolean }) {
         style={{
           fontFamily: T.mono,
           fontSize: '9px',
-          color: T.faint,
+          color: T.faintText,
           textAlign: 'right',
           margin: '5px 2px 0',
         }}
@@ -656,7 +657,7 @@ function AutoRequestCard({ reduced }: { reduced: boolean }) {
                 fontFamily: T.mono,
                 fontSize: '8px',
                 letterSpacing: '0.14em',
-                color: T.faint,
+                color: T.faintText,
                 textTransform: 'uppercase',
                 marginTop: '3px',
               }}
@@ -725,7 +726,7 @@ function ReviewCard({ review, index, reduced }: { review: Review; index: number;
               fontFamily: T.mono,
               fontSize: '9px',
               letterSpacing: '0.08em',
-              color: T.faint,
+              color: T.faintText,
               textTransform: 'uppercase',
               marginTop: '2px',
             }}

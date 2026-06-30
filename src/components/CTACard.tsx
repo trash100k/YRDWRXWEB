@@ -70,7 +70,7 @@ export function CTACard() {
                 margin: '0 0 32px 0',
               }}
             >
-              That took 8 seconds.
+              That took 12 seconds.
               <br />
               Your crew has the route.
               <br />

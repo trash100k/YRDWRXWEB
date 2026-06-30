@@ -37,8 +37,8 @@ const CLIENT = {
   full: 'Sarah Whitman',
   initials: 'SW',
   subline: 'Your property is looking great this season.',
-  address: '847 Oak St',
-  city: 'Maplewood, NJ',
+  address: '162 Birchwood Ln',
+  city: 'Cedar Park, TX',
 }
 
 const NAV_LINKS = ['My Portal', 'Visits', 'Invoices', 'Messages'] as const
@@ -83,7 +83,7 @@ const VISIT = {
 }
 
 const INVOICE = {
-  number: '#1042',
+  number: '#1058',
   desc: 'Spring Cleanup & Lawn Refresh',
   amount: '$365.00',
   due: 'Due May 9',
@@ -893,7 +893,7 @@ function BeforeAfterCard({ reduced }: { reduced: boolean }) {
         }}
       >
         <Micro color={T.greenBright}>The transformation · last visit</Micro>
-        <Micro>847 OAK ST · BACKYARD</Micro>
+        <Micro>162 BIRCHWOOD LN · BACKYARD</Micro>
       </div>
 
       <div
@@ -1410,7 +1410,7 @@ export default function Portal() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
               gap: '18px',
               alignItems: 'start',
             }}

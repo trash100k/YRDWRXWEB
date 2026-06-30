@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect } from 'react'
+import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { GRASS_VERTEX_SHADER, GRASS_FRAGMENT_SHADER } from './shaders'

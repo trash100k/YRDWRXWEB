@@ -1,5 +1,4 @@
 import { motion } from 'motion/react'
-import { useBeatStore } from '@/stores/beatStore'
 
 interface NavProps {
   beatIndex: number

@@ -86,7 +86,7 @@ const KPIS: Kpi[] = [
     id: 'collected',
     label: 'Collected',
     value: '92%',
-    sub: '$1,140 outstanding · 2 overdue',
+    sub: '$620 outstanding · 1 overdue',
     delta: { dir: 'flat', label: '3%' },
     glow: 'orange',
     spark: 'donut',
@@ -114,7 +114,7 @@ const CREW_D: CrewAva = { code: 'D4', name: 'Crew D · Patel', from: '#a78bfa', 
 const JOBS: Job[] = [
   { id: 'j1', time: '7:30', ampm: 'AM', client: 'Harborview Estates', detail: '218 Maple Crest Dr · Mowing + Edge', crew: CREW_A, status: 'done' },
   { id: 'j2', time: '8:00', ampm: 'AM', client: 'Lindgren Residence', detail: '94 Birchwood Ln · Spring Cleanup', crew: CREW_B, status: 'paid' },
-  { id: 'j3', time: '9:15', ampm: 'AM', client: 'Johnson Property Mgmt', detail: '1407 Oak St · Mow · Hedge · Blow', crew: CREW_A, status: 'progress', active: true },
+  { id: 'j3', time: '9:15', ampm: 'AM', client: 'Westlake Property Mgmt', detail: '1407 Oak St · Mow · Hedge · Blow', crew: CREW_A, status: 'progress', active: true },
   { id: 'j4', time: '9:45', ampm: 'AM', client: 'Westgate Commons', detail: '3300 Cedar Blvd · Commercial Mow', crew: CREW_C, status: 'progress' },
   { id: 'j5', time: '10:30', ampm: 'AM', client: 'Tomlinson, Greg', detail: '56 Willow Bend Ct · Mulch Install', crew: CREW_D, status: 'enroute' },
   { id: 'j6', time: '11:15', ampm: 'AM', client: 'Sienna Ridge HOA', detail: '700 Vista Ridge · Bed Maintenance', crew: CREW_B, status: 'enroute' },
@@ -150,7 +150,7 @@ const INTEL: Intel[] = [
     ts: '14 MIN AGO',
     body: (
       <>
-        <b>Johnson Property Mgmt</b> is <b>4 jobs in</b> this month — pitch a{' '}
+        <b>Westlake Property Mgmt</b> is <b>4 jobs in</b> this month — pitch a{' '}
         <b>maintenance plan</b> ($340/mo est.) to lock recurring revenue.
       </>
     ),
@@ -1125,11 +1125,12 @@ export default function Cockpit() {
             Your whole operation, on one{' '}
             <span
               style={{
-                background: `linear-gradient(90deg, ${t.greenBright}, ${t.greenNeon})`,
+                background: `linear-gradient(120deg, ${t.greenNeon}, ${t.greenBright})`,
                 WebkitBackgroundClip: 'text',
                 backgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 color: 'transparent',
+                filter: 'drop-shadow(0 0 18px rgba(93,255,160,0.35))',
               }}
             >
               screen.

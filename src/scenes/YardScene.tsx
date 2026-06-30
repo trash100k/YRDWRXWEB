@@ -1186,7 +1186,6 @@ function AerialHazeDust() {
 
 // ─── GROUND ENERGY RINGS (post-scan) ─────────────────────────────────
 function EnergyRings() {
-  const matRef    = useRef<THREE.ShaderMaterial>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
 
   const material = useMemo(() => new THREE.ShaderMaterial({
@@ -1447,7 +1446,6 @@ function CuttyReticle() {
 // ─── LENS FLARE — sun billboard, post-scan ────────────────────────────
 function LensFlare() {
   const meshRef   = useRef<THREE.Mesh>(null)
-  const matRef    = useRef<THREE.ShaderMaterial>(null)
   const beatIndex = useBeatStore(s => s.beatIndex)
   const beatT     = useBeatStore(s => s.beatT)
 
@@ -2045,7 +2043,6 @@ function ExposureController() {
 
 // ─── DEPTH-OF-FIELD — per-beat focus + bokeh, opens for the reveal ───
 // Focus lands on the active subject; widens on the beat5 reveal.
-const BEAT_FOCUS = [0.5, 0.45, 0.35, 0.4, 0.3, 0.7]
 const BEAT_BOKEH = [2.0, 2.5, 4.5, 3.5, 5.0, 1.0]
 // Normalized focus distance (mid-yard subject reads sharp); opens on beat5.
 // Re-tuned after the rig moves (camera.md §5): beat2 pulls tighter (closer rack
@@ -2210,17 +2207,17 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
           frameBufferType={THREE.HalfFloatType}
         >
           {/* 1. AO — darken cavities before anything bright (HIGH only). */}
-          {allowAO && (
+          {allowAO ? (
             <N8AO aoRadius={1.6} distanceFalloff={1.0} intensity={2.2}
               aoSamples={16} denoiseSamples={4} denoiseRadius={12} halfRes />
-          )}
+          ) : <></>}
           {/* 2. DoF — depth blur on the (AO-darkened) buffer. */}
-          {allowDOF && <CinematicDOF />}
+          {allowDOF ? <CinematicDOF /> : <></>}
           {/* 3. Bloom — mipmap-blur the HDR highlights (grass tips, sun, glints). */}
-          {allowBloom && (
+          {allowBloom ? (
             <Bloom mipmapBlur intensity={0.8} luminanceThreshold={0.62}
               luminanceSmoothing={0.25} radius={0.7} />
-          )}
+          ) : <></>}
           {/* 4. Color grade — split-tone the dawn (teal shadows / amber highs). */}
           <HueSaturation saturation={0.08} hue={0.0} />
           <BrightnessContrast brightness={0.0} contrast={0.10} />
@@ -2230,7 +2227,7 @@ function SceneContent({ quality }: { quality: QualityConfig }) {
           <ToneMapping mode={ToneMappingMode.AGX} />
           {/* 6. Lens character on the graded image — god rays, heat-haze, then
                 CA / vignette / grain LAST so they sit on final pixels. */}
-          {screenGodRays && <ScreenGodRays quality={quality} />}
+          {screenGodRays ? <ScreenGodRays quality={quality} /> : <></>}
           <HeatHaze />
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}

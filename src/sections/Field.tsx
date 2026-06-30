@@ -222,7 +222,7 @@ interface IconProps {
 
 function IconLeaf({ size = 19, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M20 4C9 4 4 11 4 19c0 0 0 1 1 1 7 0 15-5 15-15 0-1 0-1 0-1Z"
         fill={color}
@@ -240,7 +240,7 @@ function IconLeaf({ size = 19, color = T.neon }: IconProps) {
 
 function IconPin({ size = 12, color = T.muted }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11Z"
         stroke={color}
@@ -253,7 +253,7 @@ function IconPin({ size = 12, color = T.muted }: IconProps) {
 
 function IconClock({ size = 11, color = '#ffb27a' }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 7v5l3.2 2"
         stroke={color}
@@ -267,7 +267,7 @@ function IconClock({ size = 11, color = '#ffb27a' }: IconProps) {
 
 function IconMow({ size = 14, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M3 17c3 0 3-3 6-3s3 3 6 3 3-3 6-3"
         stroke={color}
@@ -286,7 +286,7 @@ function IconMow({ size = 14, color = T.neon }: IconProps) {
 
 function IconEdge({ size = 14, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M5 19 19 5" stroke={color} strokeWidth={1.8} strokeLinecap="round" />
       <path
         d="M5 19l-2 2m16-16 2-2"
@@ -300,7 +300,7 @@ function IconEdge({ size = 14, color = T.neon }: IconProps) {
 
 function IconTrim({ size = 14, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M6 6l7 7m5 5-3-3"
         stroke={color}
@@ -322,7 +322,7 @@ function chipIcon(id: string) {
 
 function IconMic({ size = 16, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"
         stroke={color}
@@ -340,7 +340,7 @@ function IconMic({ size = 16, color = T.neon }: IconProps) {
 
 function IconCheck({ size = 13, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M5 13l4 4L19 7"
         stroke={color}
@@ -354,7 +354,7 @@ function IconCheck({ size = 13, color = T.neon }: IconProps) {
 
 function IconCamera({ size = 22, color = T.greenBright }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"
         stroke={color}
@@ -367,7 +367,7 @@ function IconCamera({ size = 22, color = T.greenBright }: IconProps) {
 
 function IconTabToday({ size = 22, color = T.neon }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="3.5" y="4" width="17" height="17" rx="3" stroke={color} strokeWidth={1.8} />
       <path
         d="M3.5 9h17M8 2.5v3M16 2.5v3"
@@ -382,7 +382,7 @@ function IconTabToday({ size = 22, color = T.neon }: IconProps) {
 
 function IconTabMap({ size = 22, color = T.faint }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3Z"
         stroke={color}
@@ -396,7 +396,7 @@ function IconTabMap({ size = 22, color = T.faint }: IconProps) {
 
 function IconTabEarnings({ size = 22, color = T.faint }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 3v18M16 6.5c0-1.7-1.8-2.5-4-2.5s-4 .8-4 2.8S10 9 12 9.5s4 .8 4 2.7-1.8 2.8-4 2.8-4-.8-4-2.5"
         stroke={color}
@@ -409,7 +409,7 @@ function IconTabEarnings({ size = 22, color = T.faint }: IconProps) {
 
 function IconTabMe({ size = 22, color = T.faint }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="8" r="3.6" stroke={color} strokeWidth={1.7} />
       <path
         d="M4.5 20c0-3.6 3.4-6 7.5-6s7.5 2.4 7.5 6"
@@ -958,14 +958,14 @@ function StatusBar() {
       <span>9:41</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {/* signal */}
-        <svg width="17" height="12" viewBox="0 0 17 12" fill="none">
+        <svg width="17" height="12" viewBox="0 0 17 12" fill="none" aria-hidden="true">
           <rect x="0" y="8" width="3" height="4" rx="1" fill="#fafafa" />
           <rect x="4.5" y="5.5" width="3" height="6.5" rx="1" fill="#fafafa" />
           <rect x="9" y="3" width="3" height="9" rx="1" fill="#fafafa" />
           <rect x="13.5" y="0.5" width="3" height="11.5" rx="1" fill="#fafafa" />
         </svg>
         {/* wifi */}
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
           <path
             d="M8 11.2 8.01 11.2"
             stroke="#fafafa"
@@ -986,7 +986,7 @@ function StatusBar() {
           />
         </svg>
         {/* battery */}
-        <svg width="26" height="12" viewBox="0 0 26 12" fill="none">
+        <svg width="26" height="12" viewBox="0 0 26 12" fill="none" aria-hidden="true">
           <rect
             x="0.6"
             y="0.6"
@@ -1047,7 +1047,7 @@ function FieldHeader({ reduced }: { reduced: boolean }) {
           <IconLeaf size={19} />
         </div>
         <div style={{ lineHeight: 1.1, minWidth: 0 }}>
-          <h1
+          <div
             style={{
               margin: 0,
               fontFamily: T.fontDisplay,
@@ -1058,7 +1058,7 @@ function FieldHeader({ reduced }: { reduced: boolean }) {
             }}
           >
             Field Mode
-          </h1>
+          </div>
           <div style={{ ...monoMicro(T.faint, 9.5), marginTop: 2 }}>
             3 stops left · crew&nbsp;A
           </div>
@@ -1197,7 +1197,13 @@ function CurrentJobCard({ job }: { job: CurrentJob }) {
 
       <div
         role="button"
+        tabIndex={0}
         aria-label={`Clock out — ${job.timer}`}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault()
+          }
+        }}
         style={{
           width: '100%',
           border: 'none',

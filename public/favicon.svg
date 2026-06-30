@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="YardWorx">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#047a32"/>
+      <stop offset="0.55" stop-color="#05a845"/>
+      <stop offset="1" stop-color="#2ad16a"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eafff3"/>
+      <stop offset="1" stop-color="#bff7d6"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="116" fill="url(#bg)"/>
+  <!-- subtle inner glow -->
+  <rect x="0" y="0" width="512" height="512" rx="116" fill="#5dffa0" opacity="0.06"/>
+  <!-- leaf blade -->
+  <path d="M256 100 C 168 150, 132 250, 150 360 C 150 360, 196 300, 256 280 C 330 256, 372 196, 372 140 C 372 140, 320 96, 256 100 Z"
+        fill="url(#leaf)"/>
+  <!-- leaf midrib -->
+  <path d="M168 350 C 210 270, 286 196, 356 150" fill="none" stroke="#047a32" stroke-width="16" stroke-linecap="round" opacity="0.55"/>
+</svg>

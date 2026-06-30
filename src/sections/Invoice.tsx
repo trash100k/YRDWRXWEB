@@ -66,9 +66,9 @@ const INVOICE: InvoiceData = {
   number: 'INVOICE #1042',
   issued: 'ISSUED 06 / 30 / 2026 · DUE ON RECEIPT',
   billedToName: 'Johnson Property',
-  billedToAddr: ['4218 Magnolia Ridge Dr', 'Franklin, TN 37064'],
+  billedToAddr: ['847 Oak St', 'Cedar Park, TX 78613'],
   jobId: 'Job #JX-2287',
-  crew: 'Crew: Meridian Team 3',
+  crew: 'Crew: Marcus & Dani',
   status: 'PAID IN FULL',
   paidDate: 'JUN 30 · 2026',
   lineItems: [
@@ -380,8 +380,9 @@ function Header({ reduced }: { reduced: boolean }) {
         whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
         transition={{ ...SPRING, delay: 0 }}
-        style={{ marginBottom: '16px' }}
+        style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px' }}
       >
+        <PulseDot reduced={reduced} size={6} />
         <MicroLabel variant="green" style={{ fontSize: '10px', letterSpacing: '0.24em' }}>
           Invoicing &amp; Payments
         </MicroLabel>
@@ -403,11 +404,12 @@ function Header({ reduced }: { reduced: boolean }) {
       >
         <span
           style={{
-            background: `linear-gradient(90deg, ${t.greenBright}, ${t.greenNeon})`,
+            background: `linear-gradient(120deg, ${t.greenNeon}, ${t.greenBright})`,
             WebkitBackgroundClip: 'text',
             backgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             color: 'transparent',
+            filter: 'drop-shadow(0 0 18px rgba(93,255,160,0.35))',
           }}
         >
           Paid
@@ -976,7 +978,7 @@ export default function Invoice() {
       style={{
         position: 'relative',
         width: '100%',
-        padding: '80px 24px',
+        padding: 'clamp(56px, 8vw, 96px) 24px',
         boxSizing: 'border-box',
         overflow: 'hidden',
       }}

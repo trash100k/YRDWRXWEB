@@ -15,8 +15,6 @@ const PINS = [
 
 // Truck path: polyline through pin centers
 const PATH_POINTS = PINS.map((p) => `${p.cx},${p.cy}`).join(' ')
-// Rough total path length for stroke-dashoffset animation
-const PATH_LENGTH = 180
 
 export function Minimap() {
   const beatIndex = useBeatStore((s) => s.beatIndex)

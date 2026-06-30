@@ -20,6 +20,7 @@ const T = {
   body: '#d4d4d8',
   muted: '#a1a1aa',
   faint: '#71717a',
+  faintText: '#8b8b94',
   card: 'rgba(255,255,255,0.04)',
   cardHi: 'rgba(255,255,255,0.055)',
   bd: 'rgba(255,255,255,0.08)',
@@ -52,10 +53,10 @@ interface Conversation {
 
 const CONVERSATIONS: Conversation[] = [
   {
-    id: 'mj',
-    initials: 'MJ',
+    id: 'pa',
+    initials: 'PA',
     avatar: ['#E85D04', '#f97316'],
-    name: 'Marcus Johnson',
+    name: 'Priya Anand',
     time: '9:41a',
     preview: 'Can you guys come Thursday instead?',
     unread: true,
@@ -170,8 +171,8 @@ const DRAFT: DraftData = {
 }
 
 const CUSTOMER = {
-  initials: 'MJ',
-  name: 'Marcus Johnson',
+  initials: 'PA',
+  name: 'Priya Anand',
   address: '412 Briarwood Ln, Asheville NC',
   ltv: '$2,140',
   jobs: '4',
@@ -486,7 +487,6 @@ export default function Channels() {
       style={{
         background: T.bg,
         width: '100%',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
         boxSizing: 'border-box',
       }}
     >
@@ -494,7 +494,7 @@ export default function Channels() {
         style={{
           maxWidth: 1180,
           margin: '0 auto',
-          padding: '80px 24px',
+          padding: 'clamp(56px, 8vw, 96px) 24px',
           boxSizing: 'border-box',
         }}
       >
@@ -728,7 +728,7 @@ function FrameTopBar({ reduced }: { reduced: boolean }) {
           <LiveDot reduced={reduced} size={6} />
           <span style={monoLabel(T.greenBright, 9)}>Live</span>
         </span>
-        <span style={monoLabel(T.faint, 9.5)}>Inbox · 9 Unread</span>
+        <span style={monoLabel(T.faintText, 9.5)}>Inbox · 9 Unread</span>
       </div>
       <span style={{ display: 'inline-flex', color: T.faint }}>
         <IconDots size={16} color={T.faint} />
@@ -852,7 +852,7 @@ function AutopilotCard() {
           >
             Autopilot
           </div>
-          <div style={{ ...monoLabel(T.faint, 8), letterSpacing: '0.14em', marginTop: 2 }}>
+          <div style={{ ...monoLabel(T.faintText, 8), letterSpacing: '0.14em', marginTop: 2 }}>
             Drafting replies
           </div>
         </div>
@@ -934,7 +934,7 @@ function ConversationRow({ c }: { c: Conversation }) {
             style={{
               fontFamily: T.fontMono,
               fontSize: 9,
-              color: T.faint,
+              color: T.faintText,
               flexShrink: 0,
             }}
           >
@@ -1046,7 +1046,7 @@ function ThreadHead({ mobile }: { mobile: boolean }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-        <Avatar initials="MJ" avatar={['#E85D04', '#f97316']} presence="online" size={32} />
+        <Avatar initials="PA" avatar={['#E85D04', '#f97316']} presence="online" size={32} />
         <div style={{ minWidth: 0 }}>
           <div
             style={{
@@ -1060,12 +1060,12 @@ function ThreadHead({ mobile }: { mobile: boolean }) {
               textOverflow: 'ellipsis',
             }}
           >
-            Marcus Johnson
+            Priya Anand
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
             <span style={monoLabel(T.greenBright, 8.5)}>SMS</span>
-            <span style={{ color: T.faint, fontSize: 9 }}>·</span>
-            <span style={{ ...monoLabel(T.faint, 8.5), letterSpacing: '0.14em' }}>
+            <span style={{ color: T.faintText, fontSize: 9 }}>·</span>
+            <span style={{ ...monoLabel(T.faintText, 8.5), letterSpacing: '0.14em' }}>
               Online now
             </span>
           </div>
@@ -1081,7 +1081,7 @@ function ThreadHead({ mobile }: { mobile: boolean }) {
 function DayStamp() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ ...monoLabel(T.faint, 8.5), letterSpacing: '0.18em' }}>
+      <span style={{ ...monoLabel(T.faintText, 8.5), letterSpacing: '0.18em' }}>
         Today · 9:38 AM
       </span>
     </div>
@@ -1130,7 +1130,7 @@ function Bubble({
             <IconCheck size={11} color={T.greenBright} />
           </span>
         )}
-        <span style={{ ...monoLabel(T.faint, 8), letterSpacing: '0.14em' }}>
+        <span style={{ ...monoLabel(T.faintText, 8), letterSpacing: '0.14em' }}>
           {msg.meta}
         </span>
       </div>
@@ -1138,7 +1138,7 @@ function Bubble({
   )
 }
 
-function DraftCard({ reveal, reduced }: { reveal: Reveal; reduced: boolean }) {
+function DraftCard({ reduced }: { reveal: Reveal; reduced: boolean }) {
   const baseShadow =
     '0 0 34px rgba(45,209,106,0.28), inset 0 0 24px rgba(45,209,106,0.06)'
 
@@ -1353,7 +1353,7 @@ function Composer() {
           border: `1px solid ${T.bd}`,
           fontFamily: T.fontBody,
           fontSize: 12.5,
-          color: T.faint,
+          color: T.faintText,
           minWidth: 0,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -1488,7 +1488,7 @@ function Stat({
         border: `1px solid ${T.bd}`,
       }}
     >
-      <div style={{ ...monoLabel(T.faint, 8), letterSpacing: '0.16em' }}>{label}</div>
+      <div style={{ ...monoLabel(T.faintText, 8), letterSpacing: '0.16em' }}>{label}</div>
       <div
         style={{
           fontFamily: T.fontDisplay,
@@ -1517,7 +1517,7 @@ function LinkedJobCard() {
           marginBottom: 11,
         }}
       >
-        <span style={monoLabel(T.faint, 9)}>Linked Job</span>
+        <span style={monoLabel(T.faintText, 9)}>Linked Job</span>
         <span
           style={{
             fontFamily: T.fontMono,
@@ -1568,7 +1568,7 @@ function LinkedJobCard() {
           borderTop: `1px solid ${T.hair}`,
         }}
       >
-        <span style={{ ...monoLabel(T.faint, 8.5), letterSpacing: '0.16em' }}>Total</span>
+        <span style={{ ...monoLabel(T.faintText, 8.5), letterSpacing: '0.16em' }}>Total</span>
         <span
           style={{
             fontFamily: T.fontDisplay,
@@ -1747,7 +1747,7 @@ function ProofRow({ reveal, mobile }: { reveal: Reveal; mobile: boolean }) {
             {proofIcons[i]}
           </span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ ...monoLabel(T.faint, 8.5), letterSpacing: '0.18em' }}>
+            <div style={{ ...monoLabel(T.faintText, 8.5), letterSpacing: '0.18em' }}>
               {p.label}
             </div>
             <div

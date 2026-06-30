@@ -18,7 +18,7 @@ const T = {
   heading: '#fafafa',
   body: '#d4d4d8',
   muted: '#a1a1aa',
-  faint: '#71717a',
+  faint: '#8b8b94',
   card: 'rgba(255,255,255,0.04)',
   border: 'rgba(255,255,255,0.08)',
   hair: 'rgba(255,255,255,0.07)',
@@ -1348,7 +1348,7 @@ export default function Forge() {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))',
             gap: '24px',
             alignItems: 'start',
           }}

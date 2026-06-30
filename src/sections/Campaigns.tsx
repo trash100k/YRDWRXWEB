@@ -39,7 +39,7 @@ const SPRING = { type: 'spring' as const, stiffness: 320, damping: 28 }
 const HEAD_STATS = [
   { v: '418', l: 'In segments', money: false },
   { v: '31%', l: 'Avg open', money: false },
-  { v: '$8,400', l: 'Recovered MTD', money: true },
+  { v: '$8,400', l: 'Recovered 90d', money: true },
 ] as const
 
 type SegKey = 'past' | 'lapsed' | 'value' | 'neighbor'
@@ -78,7 +78,7 @@ const COMPOSER = {
   tone: 'Friendly tone',
   send: 'Send 8:30 AM',
   phoneName: 'YardWorx',
-  phoneNum: '+1 (612) 555-0147',
+  phoneNum: '+1 (602) 555-0148',
   phoneTime: '8:30 AM · Delivered',
 }
 
@@ -1049,7 +1049,7 @@ function RightCard({ reduced }: { reduced: boolean }) {
         </Micro>
         <RecoveredCountUp reduced={reduced} />
         <div style={{ fontSize: '11.5px', color: T.muted, marginTop: '2px', fontFamily: T.sans }}>
-          <b style={{ color: T.greenBright }}>recovered</b> from 7 campaigns
+          <b style={{ color: T.greenBright }}>recovered</b> from 4 campaigns
         </div>
 
         {/* bars */}
