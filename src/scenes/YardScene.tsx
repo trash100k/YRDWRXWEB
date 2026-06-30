@@ -360,9 +360,13 @@ function SceneLighting({ quality }: { quality: QualityConfig }) {
 
   // Shadow map sized to the quality tier (0 → shadows disabled at the Canvas level).
   const shadowSize = quality.shadowMapSize > 0 ? quality.shadowMapSize : 1024
-  // IBL fill (Environment) supplies ambient with direction on HIGH/MEDIUM, so
-  // the flat ambient/hemi lift is dropped there to avoid double-lifting. Mobile
-  // tiers keep the cheaper analytic ambient/hemi at their original strength.
+  // IBL fill (Environment) is ADDITIVE reflection/spec polish on HIGH/MEDIUM —
+  // never the primary fill. The analytic ambient/hemi/key/sun rig below carries
+  // the FULL lighting arc identically on every tier, so deleting the
+  // <DawnEnvironment> would leave the scene just as readable. (Previously this
+  // gate slashed ambient 0.55→0.12 and halved the hemi on HIGH/MED, leaning on
+  // the env as the dominant fill — which rendered mobile near-black and couldn't
+  // be verified headless. Both lifts are now tier-independent again.)
   const hasIBL = quality.tier === 'HIGH' || quality.tier === 'MEDIUM'
 
   useFrame((_, delta) => {
@@ -392,11 +396,11 @@ function SceneLighting({ quality }: { quality: QualityConfig }) {
     keyRef.current.intensity = lerp(keyRef.current.intensity, lerp(1.6, 0.5, afterT), delta * 1.5)
     keyRef.current.color.lerpColors(KEY_COOL, KEY_WARM, afterT)
 
-    // Hemisphere: night → dim afternoon. With IBL active the env carries most
-    // of the sky/ground tint so the lift is reduced (0.25→0.7); mobile keeps it.
+    // Hemisphere: night → warm afternoon — the strong IBL-independent sky/ground
+    // fill, identical on every tier (env is additive polish, not the fill).
     hemiRef.current.color.lerpColors(HEMI_SKY_NIGHT, HEMI_SKY_DAY, afterT)
     hemiRef.current.groundColor.lerpColors(HEMI_GND_NIGHT, HEMI_GND_DAY, afterT)
-    const hemiTarget = hasIBL ? lerp(0.25, 0.7, afterT) : lerp(0.35, 1.3, afterT)
+    const hemiTarget = lerp(0.45, 1.3, afterT)
     hemiRef.current.intensity = lerp(hemiRef.current.intensity, hemiTarget, delta * 1.5)
 
     // Warm sun: dominant shadow caster as it ramps in; pushes to a golden hero on beat5.
@@ -419,11 +423,12 @@ function SceneLighting({ quality }: { quality: QualityConfig }) {
 
   return (
     <>
+      {/* Additive reflection/spec polish on HIGH/MED only — NOT the fill. */}
       {hasIBL && <DawnEnvironment quality={quality} />}
-      {/* IBL supplies directional ambient on HIGH/MEDIUM, so drop the flat fill
-          0.55→0.12 there; mobile keeps the cheaper 0.55 ambient. */}
-      <ambientLight ref={ambientRef} color={0x18202e} intensity={hasIBL ? 0.12 : 0.55} />
-      <hemisphereLight ref={hemiRef} args={[0x080f20, 0x0c0f08, 0.35]} position={[0, 20, 0]} />
+      {/* Robust IBL-independent ambient floor — identical on every tier so the
+          dawn yard reads cleanly even with <DawnEnvironment> removed entirely. */}
+      <ambientLight ref={ambientRef} color={0x18202e} intensity={0.48} />
+      <hemisphereLight ref={hemiRef} args={[0x080f20, 0x0c0f08, 0.45]} position={[0, 20, 0]} />
       {/* Pre-dawn key caster — cross-fades out as the sun rises (identical frustum, no double shadows). */}
       <directionalLight
         ref={keyRef}
@@ -1111,8 +1116,11 @@ function ForegroundSilhouettes() {
         </mesh>
       </group>
 
-      {/* Tall shrub / post mass, front-right. */}
-      <group position={[8, 0, 8]}>
+      {/* Tall shrub / post mass, front-right. Pushed out to [12,0,6]: at the old
+          [8,0,8] this near-black mass sat ~3.5 units off the beat-0 lens (and the
+          beat-5 hero), filling/occluding the establishing frame. [12,0,6] keeps
+          it a soft right-edge framing vignette that clears every beat's frustum. */}
+      <group position={[12, 0, 6]}>
         <mesh material={silMat} position={[0, 2.6, 0]}>
           <cylinderGeometry args={[0.9, 1.2, 5.2, 8]} />
         </mesh>
@@ -2024,11 +2032,12 @@ function ExposureController() {
   const beatT     = useBeatStore(s => s.beatT)
 
   useFrame(() => {
-    // Re-floored 1.25→1.7 to compensate for the flat ambient dropped when the
-    // DawnEnvironment IBL landed. The composer's <ToneMapping> reads
+    // Back to the pre-IBL 1.15→1.6 floor now that the analytic ambient/hemi rig
+    // carries the full fill again (the 1.25→1.7 bump only existed to paper over
+    // the dropped ambient). The composer's <ToneMapping> reads
     // renderer.toneMappingExposure, so this single ramp drives both the
     // PP-off (renderer ACES) and PP-on (composer AgX) paths.
-    gl.toneMappingExposure = lerp(1.25, 1.7, dawnT(beatIndex, beatT))
+    gl.toneMappingExposure = lerp(1.15, 1.6, dawnT(beatIndex, beatT))
   })
 
   return null
